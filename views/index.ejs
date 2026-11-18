@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Utilizadores | Node.js MVC</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #0b0f19; color: #e2e8f0; max-width: 700px; margin: 40px auto; padding: 20px; }
+        .card { background: #131b2e; padding: 20px; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 20px; }
+        input, select, button { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; margin-right: 8px; }
+        button { background: #2563eb; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #1d4ed8; }
+        .btn-delete { background: #dc2626; padding: 6px 12px; font-size: 12px; }
+        .btn-delete:hover { background: #b91c1c; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1e293b; }
+        .erro { background: #7f1d1d; color: #fecaca; padding: 10px; border-radius: 6px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Novo Registo na Nuvem</h2>
+        <% if (erro) { %>
+            <div class="erro"><%= erro %></div>
+        <% } %>
+        <form action="/criar" method="POST">
+            <input type="text" name="nome" placeholder="Nome completo" required>
+            <select name="cargo">
+                <option value="Utilizador">Utilizador</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Programador">Programador</option>
+            </select>
+            <button type="submit">Guardar</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Registos Guardados (<%= utilizadores.length %>)</h3>
+        <% utilizadores.forEach(user => { %>
+            <div class="item">
+                <div>
+                    <strong><%= user.nome %></strong> 
+                    <span style="color: #60a5fa; font-size: 0.9em;">(<%= user.cargo %>)</span>
+                </div>
+                <form action="/apagar/<%= user._id %>" method="POST" style="margin:0;">
+                    <button type="submit" class="btn-delete">Apagar</button>
+                </form>
+            </div>
+        <% }) %>
+    </div>
+
+</body>
+</html>

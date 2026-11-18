@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Vídeos | AlphaTV</title>
+    <!-- Incluir a biblioteca HLS.js para suportar streams .m3u8 -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: Arial, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background-color: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 8px; width: 100%; max-width: 600px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        h2 { color: #58a6ff; text-align: center; margin-top: 0; }
+        input, select { width: 100%; padding: 10px; margin: 8px 0; background-color: #0d1117; border: 1px solid #30363d; color: white; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #1f6feb; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px; }
+        button:hover { background-color: #388bfd; }
+        .video-item { padding: 12px; border-bottom: 1px solid #30363d; display: flex; flex-direction: column; gap: 4px; }
+        .video-item:last-child { border-bottom: none; }
+        .acoes { display: flex; gap: 10px; margin-top: 8px; }
+        .btn-apagar { background-color: #da3633; padding: 5px 12px; text-decoration: none; border-radius: 4px; font-size: 0.85rem; color: white; text-align: center; display: inline-block; }
+        .btn-editar { background-color: #238636; padding: 5px 12px; text-decoration: none; border-radius: 4px; font-size: 0.85rem; color: white; text-align: center; display: inline-block; }
+        .btn-assistir { background-color: #1f6feb; padding: 5px 12px; border: none; border-radius: 4px; font-size: 0.85rem; color: white; cursor: pointer; text-align: center; }
+        .link-api { text-align: center; margin-bottom: 15px; }
+        .link-api a { color: #58a6ff; text-decoration: none; }
+        video { width: 100%; max-height: 350px; background: black; border-radius: 4px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Leitor de Vídeo Ativo -->
+    <div class="card">
+        <h2>Leitor AlphaTV 📺</h2>
+        <video id="videoPlayer" controls poster=""></video>
+        <p id="canalAtual" style="text-align: center; color: #58a6ff; margin: 10px 0 0 0; font-weight: bold;">Nenhum canal selecionado</p>
+    </div>
+
+    <div class="card">
+        <h2>Adicionar Novo Vídeo / Canal</h2>
+        <form action="/videos/adicionar?pin=1234" method="POST">
+            <input type="text" name="titulo" placeholder="Título (ex: Canal RTP1)" required>
+            <input type="text" name="categoria" placeholder="Categoria (ex: Desporto, Filmes)" required>
+            <input type="text" name="urlStream" placeholder="URL do Stream (.m3u8)" required>
+            <button type="submit">Guardar na Nuvem</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Filtrar Catálogo</h2>
+        <form action="/videos" method="GET">
+            <input type="hidden" name="pin" value="1234">
+            <select name="categoria" onchange="this.form.submit()">
+                <option value="Todas">Todas as Categorias</option>
+                <% categoriasDisponiveis.forEach(cat => { %>
+                    <option value="<%= cat %>" <%= categoriaSelecionada === cat ? 'selected' : '' %>><%= cat %></option>
+                <% }) %>
+            </select>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Catálogo Guardado (<%= videos.length %>)</h2>
+        <div class="link-api">
+            <a href="/api/videos" target="_blank">Ver dados em formato API JSON 🔗</a>
+        </div>
+        
+        <% if (videos.length === 0) { %>
+            <p style="text-align: center; color: #8b949e;">Ainda não existem vídeos registados nesta categoria.</p>
+        <% } else { %>
+            <% videos.forEach(video => { %>
+                <div class="video-item">
+                    <strong style="color: #ffffff;"><%= video.titulo %></strong>
+                    <span style="font-size: 0.9rem; color: #8b949e;">Categoria: <%= video.categoria %></span>
+                    <small style="color: #58a6ff; word-break: break-all;"><%= video.urlStream %></small>
+                    
+                    <div class="acoes">
+                        <button class="btn-assistir" onclick="reproduzirStream('<%= video.urlStream %>', '<%= video.titulo %>')">Assistir</button>
+                        <a href="/videos/editar/<%= video._id %>" class="btn-editar">Editar</a>
+                        <a href="/videos/apagar/<%= video._id %>" class="btn-apagar">Apagar</a>
+                    </div>
+                </div>
+            <% }) %>
+        <% } %>
+    </div>
+
+    <script>
+        function reproduzirStream(url, titulo) {
+            const video = document.getElementById('videoPlayer');
+            document.getElementById('canalAtual').innerText = "A reproduzir: " + titulo;
+
+            // Compatibilidade com HLS (.m3u8)
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play();
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Suporte nativo (ex: Safari / iOS)
+                video.src = url;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play();
+                });
+            } else {
+                alert('O teu navegador não suporta reprodução de streams HLS (.m3u8).');
+            }
+        }
+    </script>
+
+</body>
+</html>

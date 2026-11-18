@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Admin | AlphaTV</title>
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: Arial, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { color: #58a6ff; margin: 0; font-size: 1.8rem; }
+        .btn-voltar { background-color: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; }
+        .btn-voltar:hover { background-color: #30363d; color: #58a6ff; }
+        .card { background-color: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 8px; width: 100%; max-width: 600px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        h2 { color: #58a6ff; text-align: center; margin-top: 0; }
+        input { width: 100%; padding: 10px; margin: 8px 0; background-color: #0d1117; border: 1px solid #30363d; color: white; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #1f6feb; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px; }
+        button:hover { background-color: #388bfd; }
+        .video-item { padding: 12px; border-bottom: 1px solid #30363d; display: flex; flex-direction: column; gap: 4px; }
+        .video-item:last-child { border-bottom: none; }
+        .acoes { display: flex; gap: 10px; margin-top: 8px; }
+        .btn-apagar { background-color: #da3633; padding: 5px 12px; text-decoration: none; border-radius: 4px; font-size: 0.85rem; color: white; text-align: center; display: inline-block; }
+        .btn-editar { background-color: #238636; padding: 5px 12px; text-decoration: none; border-radius: 4px; font-size: 0.85rem; color: white; text-align: center; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Painel de Controlo ⚙️</h1>
+        <a href="/" class="btn-voltar">← Ver Catálogo Público</a>
+    </div>
+
+    <div class="card">
+        <h2>Adicionar Novo Canal</h2>
+        <form action="/videos/adicionar" method="POST">
+            <input type="text" name="titulo" placeholder="Título do Canal (ex: RTP1)" required>
+            <input type="text" name="categoria" placeholder="Categoria (ex: Notícias)" required>
+            <input type="text" name="urlStream" placeholder="URL do Stream (.m3u8)" required>
+            <!-- Campos EPG corrigidos -->
+            <input type="text" name="programaAtual" placeholder="Programa em Exibição (ex: Telejornal)">
+            <input type="text" name="horario" placeholder="Horário (ex: 20:00 - 21:00)">
+            <button type="submit">Guardar na Nuvem</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Gestão de Canais Guardados (<%= videos.length %>)</h2>
+        <% if (videos.length === 0) { %>
+            <p style="text-align: center; color: #8b949e;">Sem canais registados.</p>
+        <% } else { %>
+            <% videos.forEach(video => { %>
+                <div class="video-item">
+                    <strong style="color: #ffffff;"><%= video.titulo %></strong>
+                    <span style="font-size: 0.9rem; color: #8b949e;">Categoria: <%= video.categoria %></span>
+                    <span style="font-size: 0.85rem; color: #3fb950;">Programa: <%= video.programaAtual || 'N/D' %> (<%= video.horario || 'N/D' %>)</span>
+                    <small style="color: #58a6ff; word-break: break-all;"><%= video.urlStream %></small>
+                    
+                    <div class="acoes">
+                        <a href="/videos/editar/<%= video._id %>" class="btn-editar">Editar</a>
+                        <a href="/videos/apagar/<%= video._id %>" class="btn-apagar">Apagar</a>
+                    </div>
+                </div>
+            <% }) %>
+        <% } %>
+    </div>
+
+</body>
+</html>

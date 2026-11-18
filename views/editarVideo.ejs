@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Editar Vídeo | AlphaTV</title>
+    <style>
+      body {
+        background-color: #0d1117;
+        color: #c9d1d9;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 40px;
+        display: flex;
+        justify-content: center;
+      }
+      .card {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        padding: 20px;
+        border-radius: 8px;
+        width: 100%;
+        max-width: 500px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+      h2 {
+        color: #58a6ff;
+        text-align: center;
+        margin-top: 0;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        color: white;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #238636;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+      button:hover {
+        background-color: #2ea043;
+      }
+      .voltar {
+        display: block;
+        text-align: center;
+        margin-top: 15px;
+        color: #8b949e;
+        text-decoration: none;
+      }
+      .voltar:hover {
+        color: #58a6ff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Editar Conteúdo</h2>
+      <form action="/videos/atualizar/<%= video._id %>" method="POST">
+        <input type="text" name="titulo" value="<%= video.titulo %>" required />
+        <input
+          type="text"
+          name="categoria"
+          value="<%= video.categoria %>"
+          required
+        />
+        <input
+          type="text"
+          name="urlStream"
+          value="<%= video.urlStream %>"
+          required
+        />
+        <button type="submit">Guardar Alterações</button>
+      </form>
+      <a href="/videos?pin=1234" class="voltar">← Voltar ao Painel</a>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+aprendendo node/
+
+
+├── config/
+│   └── db.js                 # Ligação isolada ao MongoDB Atlas
+
+├── controllers/
+│   └── userController.js     # Lógica de negócio (criar, listar, editar, apagar)
+
+├── models/
+│   └── User.js               # Estrutura e validações dos dados no Mongoose
+
+├── routes/
+│   └── userRoutes.js         # Mapeamento dos endereços (URLs)
+
+├── views/
+│   └── index.ejs             # Interface visual dinâmica (HTML + JavaScript)
+
+├── .env                      # Guarda senhas e configurações secretas
+├── package.json
+└── servidor-express.js       # Ponto de entrada limpo do servidor

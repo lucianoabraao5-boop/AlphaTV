@@ -1,0 +1,36 @@
+Hoje criei o meu primeiro servidor Node.js e agora estou a aprender a escrever ficheiros!
+Esta é uma nova linha que adicionei mais tarde!
+Esta é uma nova linha que adicionei mais tarde! Após esta linha poderei escrever mais.
+tem que ser passo a passo pois nao sei nada ainda e conto com voce para ajudar-me.
+Estamos a ir passo a passo e o Node.js está a funcionar!
+entao, tudo que eu escrever aqui vai aparecer la?
+Estamos a ir passo a passo e o Node.js está a funcionar!
+ precisa estar na mesma linha 
+entao, tudo que eu escrever aqui vai aparecer la?
+Estamos a ir passo a passo e o Node.js está a funcionar!
+
+      precisa estar na mesma linha 
+
+      entao, tudo que eu escrever aqui vai aparecer la?
+Estamos a ir passo a passo e o Node.js está a funcionar!
+
+      precisa estar na mesma linha 
+
+      entao, tudo que eu escrever aqui vai aparecer la?
+outra dica eh que para usar "crase"
+
+      que nao tera problemas em quebras de linha. Dai, nao ficara com texto (codigo) grande.Estamos a ir passo a passo e o Node.js está a funcionar!
+
+      precisa estar na mesma linha 
+
+      entao, tudo que eu escrever aqui vai aparecer la?
+outra dica eh que quando usar "crase"
+
+      que nao tera problemas em quebras de linha. Dai, nao ficara com texto (codigo) grande.Estamos a ir passo a passo e o Node.js está a funcionar!
+
+      precisa estar na mesma linha 
+
+      entao, tudo que eu escrever aqui vai aparecer la?
+outra dica eh que quando usar "crase"
+
+      que nao tera problemas em quebras de linha. Dai, nao ficara com texto (codigo) grande.
