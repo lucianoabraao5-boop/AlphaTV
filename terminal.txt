@@ -1,7 +1,0 @@
-MUDANCA NO TERMINAL
-
-cd "C:\Users\LUTAABRAAO\Desktop\aprendendo node"
-
--------------------------\\-------------------------\\-------------------------
-
-NODE = Faz o progama rodar
