@@ -5,8 +5,9 @@ const userRoutes = require("./routes/userRoutes");
 const videoRoutes = require("./routes/videoRoutes"); // <--- Verifica se esta linha existe
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log(`Servidor AlphaTV a correr na porta ${PORT}`);
+  console.log(`Servidor a correr na porta ${PORT}`);
 });
 
 conectarDB();
