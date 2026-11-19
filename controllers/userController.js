@@ -1,4 +1,4 @@
-const User = require("../models/User");
+const User = require("../models/user");
 
 // 1. READ - Listar todos os utilizadores e renderizar a página
 exports.listarUtilizadores = async (req, res) => {
