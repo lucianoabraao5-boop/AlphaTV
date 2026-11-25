@@ -14,4 +14,3 @@ exports.verificarAdmin = (req, res, next) => {
   }
   next();
 };
-npm start
