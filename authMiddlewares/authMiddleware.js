@@ -1,5 +1,24 @@
 const User = require("../models/User");
 
+function verificarSessao(req, res, next) {
+  if (!req.session || !req.session.utilizador) {
+    return res.redirect("/");
+  }
+  return next();
+}
+
+function verificarAdmin(req, res, next) {
+  if (!req.session || !req.session.utilizador) {
+    return res.redirect("/");
+  }
+
+  if (req.session.utilizador.role !== "Administrador") {
+    return res.status(403).send("Acesso negado: apenas Administradores.");
+  }
+
+  return next();
+}
+
 async function verificarAcessoAtivo(req, res, next) {
   try {
     if (!req.session || !req.session.utilizador) {
@@ -54,5 +73,7 @@ async function verificarAcessoAtivo(req, res, next) {
 }
 
 module.exports = {
+  verificarSessao,
+  verificarAdmin,
   verificarAcessoAtivo,
 };
