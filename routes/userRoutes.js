@@ -27,7 +27,16 @@ router.get("/admin", verificarAdmin, async (req, res) => {
     res.status(500).send("Erro ao carregar o painel de administração.");
   }
 });
+const {
+  verificarSessao,
+  verificarAdmin,
+  verificarAcessoAtivo,
+} = require("../authMiddlewares/authMiddleware");
 
+// Página de cobrança após os 7 dias
+router.get("/subscricao", verificarSessao, (req, res) => {
+  res.render("subscricao", { utilizador: req.session.utilizador });
+});
 // Alternar perfil (Utilizador <-> Administrador)
 router.post(
   "/admin/utilizadores/:id/role",

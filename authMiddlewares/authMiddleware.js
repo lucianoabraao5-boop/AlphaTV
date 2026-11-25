@@ -11,11 +11,10 @@ function verificarAdmin(req, res, next) {
   if (!req.session || !req.session.utilizador) {
     return res.redirect("/");
   }
-
-  if (req.session.utilizador.role !== "Administrador") {
+  const role = (req.session.utilizador.role || "").toLowerCase();
+  if (role !== "administrador") {
     return res.status(403).send("Acesso negado: apenas Administradores.");
   }
-
   return next();
 }
 
