@@ -23,22 +23,28 @@ exports.cadastrar = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const novoUser = await User.create({
-      nome,
-      email,
-      password: passwordHash,
-      role: "Utilizador", // Nunca permite criar Administrador pelo cadastro público
-    });
-    const seteDiasEmMs = 7 * 24 * 60 * 60 * 1000;
-
+    // No cadastro:
+    const seteDiasMs = 7 * 24 * 60 * 60 * 1000;
     const novoUtilizador = await User.create({
       nome,
       email,
       password: passwordHash,
       role: "Utilizador",
-      trialEndsAt: new Date(Date.now() + seteDiasEmMs),
+      trialEndsAt: new Date(Date.now() + seteDiasMs),
       statusSubscricao: "trial",
     });
+
+    // No login (depois de validar email e password):
+    const isAdmin = (user.role || "").toLowerCase() === "administrador";
+
+    req.session.utilizador = {
+      id: user._id,
+      nome: user.nome,
+      email: user.email,
+      role: isAdmin ? "Administrador" : "Utilizador",
+    };
+
+    return res.redirect(isAdmin ? "/admin" : "/player");
 
     // Inicia sessão automaticamente após cadastro
     req.session.utilizador = {

@@ -33,10 +33,19 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-    .badge-role {
+    .badge-admin {
       background: #082f49;
       color: #38bdf8;
       border: 1px solid #0284c7;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: bold;
+    }
+    .badge-user {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #475569;
       padding: 4px 10px;
       border-radius: 999px;
       font-size: 0.82rem;
@@ -60,9 +69,22 @@
     .btn-sair:hover {
       background: #991b1b;
     }
+    .banner-trial {
+      max-width: 1050px;
+      margin: 18px auto 0 auto;
+      padding: 12px 18px;
+      background: #082f49;
+      border: 1px solid #0284c7;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
     main {
       max-width: 1050px;
-      margin: 28px auto;
+      margin: 22px auto;
       padding: 0 20px;
     }
     .card-player {
@@ -101,31 +123,44 @@
   </style>
 </head>
 <body>
+  <% const isAdmin = utilizador && (utilizador.role || "").toLowerCase() === "administrador"; %>
+
   <header>
     <div class="marca">AlphaTV</div>
     <div class="topo-direita">
       <span>Olá, <strong><%= utilizador ? utilizador.nome : "Utilizador" %></strong></span>
-      <span class="badge-role"><%= utilizador ? utilizador.role : "Utilizador" %></span>
 
-      <% if (utilizador && utilizador.role === "Administrador") { %>
-        <a href="/admin" class="btn">Painel Admin</a>
+      <% if (isAdmin) { %>
+        <span class="badge-admin">Administrador</span>
+        <a href="/admin" class="btn">Ir para Dashboard Admin</a>
+      <% } else { %>
+        <span class="badge-user">Utilizador</span>
       <% } %>
 
       <a href="/logout" class="btn btn-sair">Sair</a>
     </div>
   </header>
 
+  <% if (!isAdmin && typeof acessoInfo !== "undefined" && acessoInfo && acessoInfo.emTeste) { %>
+    <div class="banner-trial">
+      <span>
+        Período gratuito de 7 dias ativo: restam <strong><%= acessoInfo.diasRestantes %> dia(s)</strong> antes da subscrição.
+      </span>
+      <a href="/subscricao" class="btn">Ver Planos / Subscrever</a>
+    </div>
+  <% } %>
+
   <main>
     <div class="card-player">
       <h2>Conteúdo Interno</h2>
       <video id="videoPlayer" controls preload="metadata"></video>
 
-      <% if (utilizador && utilizador.role === "Administrador") { %>
+      <% if (isAdmin) { %>
         <div class="barra-admin-link">
           <input
             type="text"
             id="inputLinkVideo"
-            placeholder="Cola aqui um link de vídeo (.mp4 ou .m3u8) para testar..."
+            placeholder="Área Admin: cola aqui um link de vídeo (.mp4 ou .m3u8)..."
           />
           <button type="button" class="btn" onclick="reproduzirLink()">Reproduzir</button>
         </div>
