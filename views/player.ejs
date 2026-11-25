@@ -27,18 +27,19 @@
       font-size: 1.25rem;
       font-weight: bold;
     }
-    .acoes {
+    .topo-direita {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
-    .badge {
+    .badge-role {
       background: #082f49;
       color: #38bdf8;
       border: 1px solid #0284c7;
       padding: 4px 10px;
       border-radius: 999px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
     }
     .btn, a.btn {
       background: #0284c7;
@@ -47,7 +48,7 @@
       border: none;
       padding: 8px 14px;
       border-radius: 6px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       cursor: pointer;
     }
     .btn:hover, a.btn:hover {
@@ -60,33 +61,38 @@
       background: #991b1b;
     }
     main {
-      max-width: 1100px;
+      max-width: 1050px;
       margin: 28px auto;
       padding: 0 20px;
     }
-    .player-box {
+    .card-player {
       background: #0f172a;
       border: 1px solid #1e293b;
       border-radius: 10px;
-      padding: 20px;
+      padding: 22px;
       box-shadow: 0 0 24px rgba(0, 180, 255, 0.12);
+    }
+    .card-player h2 {
+      margin: 0 0 16px 0;
+      color: #38bdf8;
     }
     video {
       width: 100%;
-      max-height: 520px;
-      border-radius: 8px;
+      max-height: 480px;
       background: #000000;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
     }
-    .barra-stream {
+    .barra-admin-link {
       display: flex;
       gap: 10px;
-      margin-top: 14px;
+      margin-top: 16px;
       flex-wrap: wrap;
     }
-    .barra-stream input {
+    .barra-admin-link input {
       flex: 1;
       min-width: 240px;
-      padding: 10px;
+      padding: 10px 12px;
       border-radius: 6px;
       border: 1px solid #334155;
       background: #020617;
@@ -97,48 +103,45 @@
 <body>
   <header>
     <div class="marca">AlphaTV</div>
-    <div class="acoes">
-      <span>Olá, <strong><%= utilizador.nome %></strong></span>
-      <span class="badge"><%= utilizador.role %></span>
-      <% if (utilizador.role === "Administrador") { %>
+    <div class="topo-direita">
+      <span>Olá, <strong><%= utilizador ? utilizador.nome : "Utilizador" %></strong></span>
+      <span class="badge-role"><%= utilizador ? utilizador.role : "Utilizador" %></span>
+
+      <% if (utilizador && utilizador.role === "Administrador") { %>
         <a href="/admin" class="btn">Painel Admin</a>
       <% } %>
+
       <a href="/logout" class="btn btn-sair">Sair</a>
     </div>
   </header>
 
   <main>
-    <div class="player-box">
-      <h2 style="margin-top: 0; color: #38bdf8;">Conteúdo Interno</h2>
-      <video id="videoPlayer" controls playsinline></video>
+    <div class="card-player">
+      <h2>Conteúdo Interno</h2>
+      <video id="videoPlayer" controls preload="metadata"></video>
 
-      <div class="barra-stream">
-        <input
-          type="text"
-          id="streamUrl"
-          placeholder="Cola aqui um link de vídeo (.mp4 ou .m3u8) para testar..."
-        />
-        <button class="btn" onclick="carregarStream()">Reproduzir</button>
-      </div>
+      <% if (utilizador && utilizador.role === "Administrador") { %>
+        <div class="barra-admin-link">
+          <input
+            type="text"
+            id="inputLinkVideo"
+            placeholder="Cola aqui um link de vídeo (.mp4 ou .m3u8) para testar..."
+          />
+          <button type="button" class="btn" onclick="reproduzirLink()">Reproduzir</button>
+        </div>
+      <% } %>
     </div>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
-    function carregarStream() {
-      const url = document.getElementById("streamUrl").value.trim();
+    function reproduzirLink() {
+      const input = document.getElementById("inputLinkVideo");
       const video = document.getElementById("videoPlayer");
+      if (!input || !video) return;
+      const url = input.value.trim();
       if (!url) return;
-
-      if (url.includes(".m3u8") && window.Hls && Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-      } else {
-        video.src = url;
-        video.play();
-      }
+      video.src = url;
+      video.play().catch(() => {});
     }
   </script>
 </body>
