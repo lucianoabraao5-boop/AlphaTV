@@ -1,3 +1,18 @@
+const express = require("express");
+const router = express.Router();
+const User = require("../models/User");
+const userController = require("../controllers/userController");
+const {
+  verificarSessao,
+  verificarAdmin,
+} = require("../authMiddlewares/authMiddleware");
+
+// Rotas públicas (Cadastro e Login)
+router.get("/", userController.mostrarPaginaAcesso);
+router.post("/cadastrar", userController.cadastrar);
+router.post("/login", userController.login);
+router.get("/logout", userController.logout);
+
 // Rota administrativa (apenas Administrador com sessão ativa)
 router.get("/admin", verificarAdmin, async (req, res) => {
   try {
@@ -49,3 +64,4 @@ router.post(
     }
   },
 );
+module.exports = router;
