@@ -1,2 +1,178 @@
-user.statusSubscricao = "ativo"; user.pagoAte = new Date(Date.now() + 30 * 24 *
-60 * 60 * 1000); // exemplo: +30 dias await user.save();
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlphaTV | Subscrição e Período de Teste</title>
+  <style>
+    body {
+      background-color: #050811;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: #0b1324;
+      border-bottom: 1px solid #1e293b;
+      padding: 14px 24px;
+    }
+    .marca {
+      color: #38bdf8;
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+    .acoes-topo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn, a.btn {
+      background: #0284c7;
+      color: #ffffff;
+      text-decoration: none;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 0.92rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn:hover, a.btn:hover {
+      background: #0ea5e9;
+    }
+    .btn-sair {
+      background: #7f1d1d;
+    }
+    .btn-sair:hover {
+      background: #991b1b;
+    }
+    main {
+      max-width: 780px;
+      margin: 36px auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: #0b1324;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 0 28px rgba(0, 180, 255, 0.12);
+    }
+    h1 {
+      margin: 0 0 10px 0;
+      color: #38bdf8;
+      font-size: 1.6rem;
+    }
+    .estado-box {
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin: 18px 0;
+      border: 1px solid #0284c7;
+      background: #082f49;
+    }
+    .estado-expirado {
+      border-color: #dc2626;
+      background: rgba(127, 29, 29, 0.35);
+    }
+    .plano-box {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .preco {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    .lista-beneficios {
+      margin: 8px 0 0 0;
+      padding-left: 18px;
+      color: #cbd5e1;
+      font-size: 0.92rem;
+    }
+    .lista-beneficios li {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <%
+    const agora = new Date();
+    const dataFimTeste = utilizador && utilizador.trialEndsAt ? new Date(utilizador.trialEndsAt) : null;
+    const diasRestantes = dataFimTeste
+      ? Math.max(0, Math.ceil((dataFimTeste - agora) / (24 * 60 * 60 * 1000)))
+      : 0;
+    const ativoPago =
+      utilizador &&
+      utilizador.statusSubscricao === "ativo" &&
+      utilizador.pagoAte &&
+      new Date(utilizador.pagoAte) > agora;
+    const dentroTeste = !ativoPago && dataFimTeste && dataFimTeste > agora;
+  %>
+
+  <header>
+    <div class="marca">AlphaTV • Subscrição</div>
+    <div class="acoes-topo">
+      <span>Olá, <strong><%= utilizador ? utilizador.nome : "Utilizador" %></strong></span>
+      <% if (ativoPago || dentroTeste) { %>
+        <a href="/player" class="btn">Voltar ao Player</a>
+      <% } %>
+      <a href="/logout" class="btn btn-sair">Sair</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <h1>Acesso e Subscrição AlphaTV</h1>
+      <p style="color: #94a3b8; margin: 0;">
+        Cada nova conta dispõe de <strong>7 dias gratuitos</strong> para experimentar a plataforma. Após esse prazo, é necessária uma subscrição ativa para continuar a assistir.
+      </p>
+
+      <% if (ativoPago) { %>
+        <div class="estado-box">
+          <strong>Subscrição Ativa</strong> — Válida até <strong><%= new Date(utilizador.pagoAte).toLocaleDateString("pt-PT") %></strong>.
+        </div>
+      <% } else if (dentroTeste) { %>
+        <div class="estado-box">
+          <strong>Período Gratuito Ativo</strong> — Restam <strong><%= diasRestantes %> dia(s)</strong> (até <strong><%= dataFimTeste.toLocaleDateString("pt-PT") %></strong>).
+        </div>
+      <% } else { %>
+        <div class="estado-box estado-expirado">
+          <strong>Período Gratuito de 7 Dias Terminado</strong> — Ativa a tua subscrição abaixo para desbloquear o acesso ao player.
+        </div>
+      <% } %>
+
+      <div class="plano-box">
+        <div>
+          <strong style="font-size: 1.1rem; color: #f8fafc;">Plano Mensal AlphaTV (30 dias)</strong>
+          <ul class="lista-beneficios">
+            <li>7 dias iniciais gratuitos incluídos na criação da conta</li>
+            <li>Acesso contínuo ao player após o término do teste</li>
+            <li>Renovação por 30 dias</li>
+          </ul>
+        </div>
+        <div style="text-align: right;">
+          <div class="preco">9,99 € / mês</div>
+          <form action="/subscricao/ativar" method="POST" style="margin-top: 10px;">
+            <button type="submit" class="btn">Ativar Subscrição (30 dias)</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

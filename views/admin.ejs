@@ -230,46 +230,26 @@
             </tr>
           </thead>
           <tbody>
-            <% if (utilizadores.length === 0) { %>
-              <tr>
-                <td colspan="4" style="color: #94a3b8; text-align: center;">
-                  Nenhum utilizador registado.
-                </td>
-              </tr>
-            <% } %>
-
-            <% utilizadores.forEach(u => { %>
-              <tr>
-                <td><strong><%= u.nome %></strong></td>
-                <td><%= u.email || "Sem e-mail" %></td>
-                <td>
-                  <% if (u.role === "Administrador") { %>
-                    <span class="badge-admin">Administrador</span>
-                  <% } else { %>
-                    <span class="badge-user">Utilizador</span>
-                  <% } %>
-                </td>
-                <td>
-                  <div class="acoes-linha">
-                    <form action="/admin/utilizadores/<%= u._id %>/role" method="POST">
-                      <button type="submit" class="btn btn-secundario">
-                        <%= u.role === "Administrador" ? "Tornar Utilizador" : "Tornar Admin" %>
-                      </button>
-                    </form>
-
-                    <% if (utilizador && String(u._id) !== String(utilizador.id)) { %>
-                      <form
-                        action="/admin/utilizadores/<%= u._id %>/apagar"
-                        method="POST"
-                        onsubmit="return confirm('Apagar este utilizador?');"
-                      >
-                        <button type="submit" class="btn btn-sair">Apagar</button>
-                      </form>
-                    <% } %>
-                  </div>
-                </td>
-              </tr>
-            <% }) %>
+            <td>
+  <%
+    const agoraAdmin = new Date();
+    const isAdminRow = (u.role || "").toLowerCase() === "administrador";
+    const pagoAtivoRow = u.statusSubscricao === "ativo" && u.pagoAte && new Date(u.pagoAte) > agoraAdmin;
+    const trialDateRow = u.trialEndsAt ? new Date(u.trialEndsAt) : null;
+    const diasRestantesRow = trialDateRow
+      ? Math.max(0, Math.ceil((trialDateRow - agoraAdmin) / (24 * 60 * 60 * 1000)))
+      : 7;
+  %>
+  <% if (isAdminRow) { %>
+    <span class="badge-admin">Acesso Admin</span>
+  <% } else if (pagoAtivoRow) { %>
+    <span class="badge-admin">Ativo (até <%= new Date(u.pagoAte).toLocaleDateString("pt-PT") %>)</span>
+  <% } else if (trialDateRow && trialDateRow > agoraAdmin) { %>
+    <span class="badge-user">Teste: <%= diasRestantesRow %> dia(s)</span>
+  <% } else { %>
+    <span class="badge-user">Expirado (Cobrança)</span>
+  <% } %>
+</td>
           </tbody>
         </table>
       </div>
