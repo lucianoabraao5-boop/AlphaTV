@@ -19,3 +19,5 @@ aprendendo node/
 ├── .env                      # Guarda senhas e configurações secretas
 ├── package.json
 └── servidor-express.js       # Ponto de entrada limpo do servidor
+
+cd "C:\Users\LUTAABRAAO\Desktop\aprendendo node"

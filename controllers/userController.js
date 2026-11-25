@@ -29,6 +29,16 @@ exports.cadastrar = async (req, res) => {
       password: passwordHash,
       role: "Utilizador", // Nunca permite criar Administrador pelo cadastro público
     });
+    const seteDiasEmMs = 7 * 24 * 60 * 60 * 1000;
+
+    const novoUtilizador = await User.create({
+      nome,
+      email,
+      password: passwordHash,
+      role: "Utilizador",
+      trialEndsAt: new Date(Date.now() + seteDiasEmMs),
+      statusSubscricao: "trial",
+    });
 
     // Inicia sessão automaticamente após cadastro
     req.session.utilizador = {
