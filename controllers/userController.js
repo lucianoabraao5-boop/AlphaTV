@@ -1,37 +1,88 @@
-const User = require("../models/user");
+const bcrypt = require("bcryptjs");
+const User = require("../models/User");
 
-// 1. READ - Listar todos os utilizadores e renderizar a página
-exports.listarUtilizadores = async (req, res) => {
-  try {
-    // Busca todos os registos ordenados do mais recente para o mais antigo
-    const utilizadores = await User.find().sort({ criadoEm: -1 });
-    res.render("index", { utilizadores, erro: null });
-  } catch (erro) {
-    res.status(500).send("Erro ao carregar dados: " + erro.message);
+// Página inicial pública (Login e Cadastro)
+exports.mostrarPaginaAcesso = (req, res) => {
+  if (req.session.utilizador) {
+    return res.redirect(
+      req.session.utilizador.role === "Administrador" ? "/admin" : "/player",
+    );
   }
+  res.render("acesso", { erro: null });
 };
 
-// 2. CREATE - Guardar um novo utilizador
-exports.criarUtilizador = async (req, res) => {
+// Cadastro público -> força sempre Utilizador e cria sessão
+exports.cadastrar = async (req, res) => {
   try {
-    const { nome, cargo } = req.body;
-    await User.create({ nome, cargo });
-    res.redirect("/"); // Volta para a página inicial atualizada
+    const { nome, email, password } = req.body;
+
+    const existe = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existe) {
+      return res.render("acesso", { erro: "Este e-mail já está registado." });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const novoUser = await User.create({
+      nome,
+      email,
+      password: passwordHash,
+      role: "Utilizador", // Nunca permite criar Administrador pelo cadastro público
+    });
+
+    // Inicia sessão automaticamente após cadastro
+    req.session.utilizador = {
+      id: novoUser._id,
+      nome: novoUser.nome,
+      email: novoUser.email,
+      role: novoUser.role,
+    };
+
+    return res.redirect("/player");
   } catch (erro) {
-    const utilizadores = await User.find().sort({ criadoEm: -1 });
-    res.render("index", {
-      utilizadores,
-      erro: "Erro ao guardar: verifica se o nome tem pelo menos 3 letras.",
+    console.error("Erro no cadastro:", erro);
+    return res.render("acesso", {
+      erro: "Erro ao criar conta. Tenta novamente.",
     });
   }
 };
 
-// 3. DELETE - Apagar um utilizador pelo ID
-exports.apagarUtilizador = async (req, res) => {
+// Login -> valida credenciais e guarda na sessão
+exports.login = async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
-    res.redirect("/");
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.render("acesso", {
+        erro: "E-mail ou palavra-passe inválidos.",
+      });
+    }
+
+    const senhaValida = await bcrypt.compare(password, user.password);
+    if (!senhaValida) {
+      return res.render("acesso", {
+        erro: "E-mail ou palavra-passe inválidos.",
+      });
+    }
+
+    req.session.utilizador = {
+      id: user._id,
+      nome: user.nome,
+      email: user.email,
+      role: user.role,
+    };
+
+    return res.redirect(user.role === "Administrador" ? "/admin" : "/player");
   } catch (erro) {
-    res.status(500).send("Erro ao apagar registo.");
+    console.error("Erro no login:", erro);
+    return res.render("acesso", { erro: "Erro ao iniciar sessão." });
   }
+};
+
+// Terminar sessão
+exports.logout = (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/");
+  });
 };

@@ -1,14 +1,20 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
+const {
+  verificarSessao,
+  verificarAdmin,
+} = require("../middlewares/authMiddleware");
 
-// Rota principal (GET) -> Lista os dados
-router.get("/", userController.listarUtilizadores);
+// Rotas públicas
+router.get("/", userController.mostrarPaginaAcesso);
+router.post("/cadastrar", userController.cadastrar);
+router.post("/login", userController.login);
+router.get("/logout", userController.logout);
 
-// Rota de envio do formulário (POST) -> Cria novo registo
-router.post("/criar", userController.criarUtilizador);
-
-// Rota para apagar (POST com parâmetro dinâmico :id)
-router.post("/apagar/:id", userController.apagarUtilizador);
+// Rota administrativa protegida (apenas Administrador)
+router.get("/admin", verificarAdmin, async (req, res) => {
+  // Aqui renderizas a tua view de gestão (ex: res.render("index", { utilizadores }))
+});
 
 module.exports = router;

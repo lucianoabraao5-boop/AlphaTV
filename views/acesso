@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlphaTV | Entrar ou Criar Conta</title>
+  <style>
+    body {
+      background-color: #070b14;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 720px;
+    }
+    .card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 0 20px rgba(0, 180, 255, 0.12);
+    }
+    h2 {
+      color: #38bdf8;
+      margin-top: 0;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #f8fafc;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 11px;
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0ea5e9;
+    }
+    .erro {
+      grid-column: 1 / -1;
+      background: #450a0a;
+      border: 1px solid #ef4444;
+      color: #fecaca;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <% if (erro) { %>
+      <div class="erro"><%= erro %></div>
+    <% } %>
+
+    <!-- Formulário de Login -->
+    <div class="card">
+      <h2>Entrar no AlphaTV</h2>
+      <form action="/login" method="POST">
+        <input type="email" name="email" placeholder="O teu e-mail" required />
+        <input type="password" name="password" placeholder="Palavra-passe" required />
+        <button type="submit">Entrar</button>
+      </form>
+    </div>
+
+    <!-- Formulário de Cadastro (Sempre Utilizador) -->
+    <div class="card">
+      <h2>Criar Conta</h2>
+      <form action="/cadastrar" method="POST">
+        <input type="text" name="nome" placeholder="Nome completo" required />
+        <input type="email" name="email" placeholder="E-mail" required />
+        <input type="password" name="password" placeholder="Criar palavra-passe" required />
+        <button type="submit">Registar e Assistir</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
