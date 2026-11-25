@@ -1,4 +1,3 @@
-// Verifica se existe sessão iniciada
 exports.verificarSessao = (req, res, next) => {
   if (!req.session.utilizador) {
     return res.redirect("/");
@@ -6,7 +5,6 @@ exports.verificarSessao = (req, res, next) => {
   next();
 };
 
-// Verifica se o utilizador logado é Administrador
 exports.verificarAdmin = (req, res, next) => {
   if (!req.session.utilizador) {
     return res.redirect("/");
@@ -16,3 +14,4 @@ exports.verificarAdmin = (req, res, next) => {
   }
   next();
 };
+npm start
