@@ -5,14 +5,22 @@ const userController = require("../controllers/userController");
 const {
   verificarSessao,
   verificarAdmin,
+  verificarAcessoAtivo,
 } = require("../authMiddlewares/authMiddleware");
 
 // Rotas públicas (Cadastro e Login)
 router.get("/", userController.mostrarPaginaAcesso);
+router.get("/login", userController.mostrarPaginaAcesso);
 router.post("/cadastrar", userController.cadastrar);
 router.post("/login", userController.login);
 router.get("/logout", userController.logout);
-router.get("/login", userController.mostrarPaginaAcesso);
+
+// Página de cobrança / subscrição após os 7 dias
+router.get("/subscricao", verificarSessao, (req, res) => {
+  res.render("subscricao", {
+    utilizador: req.session.utilizador,
+  });
+});
 
 // Rota administrativa (apenas Administrador com sessão ativa)
 router.get("/admin", verificarAdmin, async (req, res) => {
@@ -27,16 +35,7 @@ router.get("/admin", verificarAdmin, async (req, res) => {
     res.status(500).send("Erro ao carregar o painel de administração.");
   }
 });
-const {
-  verificarSessao,
-  verificarAdmin,
-  verificarAcessoAtivo,
-} = require("../authMiddlewares/authMiddleware");
 
-// Página de cobrança após os 7 dias
-router.get("/subscricao", verificarSessao, (req, res) => {
-  res.render("subscricao", { utilizador: req.session.utilizador });
-});
 // Alternar perfil (Utilizador <-> Administrador)
 router.post(
   "/admin/utilizadores/:id/role",
@@ -45,8 +44,8 @@ router.post(
     try {
       const alvo = await User.findById(req.params.id);
       if (alvo) {
-        alvo.role =
-          alvo.role === "Administrador" ? "Utilizador" : "Administrador";
+        const atualAdmin = (alvo.role || "").toLowerCase() === "administrador";
+        alvo.role = atualAdmin ? "Utilizador" : "Administrador";
         await alvo.save();
       }
       res.redirect("/admin");
@@ -63,7 +62,6 @@ router.post(
   verificarAdmin,
   async (req, res) => {
     try {
-      // Evita que o administrador apague a própria conta logada
       if (req.params.id !== String(req.session.utilizador.id)) {
         await User.findByIdAndDelete(req.params.id);
       }
@@ -74,4 +72,5 @@ router.post(
     }
   },
 );
+
 module.exports = router;
