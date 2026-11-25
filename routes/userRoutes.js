@@ -12,6 +12,7 @@ router.get("/", userController.mostrarPaginaAcesso);
 router.post("/cadastrar", userController.cadastrar);
 router.post("/login", userController.login);
 router.get("/logout", userController.logout);
+router.get("/login", userController.mostrarPaginaAcesso);
 
 // Rota administrativa (apenas Administrador com sessão ativa)
 router.get("/admin", verificarAdmin, async (req, res) => {
