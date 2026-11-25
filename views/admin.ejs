@@ -46,6 +46,13 @@
     .btn:hover, a.btn:hover {
       background: #0ea5e9;
     }
+    .btn-renovar {
+      background: #0369a1;
+      border: 1px solid #38bdf8;
+    }
+    .btn-renovar:hover {
+      background: #0284c7;
+    }
     .btn-sair {
       background: #7f1d1d;
     }
@@ -59,8 +66,17 @@
     .btn-secundario:hover {
       background: #334155;
     }
+    .input-dias {
+      width: 64px;
+      padding: 7px 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #f8fafc;
+      font-size: 0.88rem;
+    }
     main {
-      max-width: 1120px;
+      max-width: 1180px;
       margin: 28px auto;
       padding: 0 20px;
     }
@@ -166,10 +182,14 @@
     .acoes-linha {
       display: flex;
       gap: 8px;
+      align-items: center;
       flex-wrap: wrap;
     }
     .acoes-linha form {
       margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
   </style>
 </head>
@@ -191,7 +211,7 @@
 
   <main>
     <h1 class="titulo-pagina">Gestão Central da Plataforma</h1>
-    <p class="subtitulo">Controlo de contas, perfis de acesso, período de 7 dias e subscrições do AlphaTV.</p>
+    <p class="subtitulo">Controlo de contas, perfis de acesso, renovação de dias gratuitos e subscrições do AlphaTV.</p>
 
     <div class="grid-kpis">
       <div class="kpi-card">
@@ -227,7 +247,7 @@
               <th>Nome</th>
               <th>E-mail</th>
               <th>Perfil</th>
-              <th>Subscrição / 7 Dias</th>
+              <th>Subscrição / Dias Gratuitos</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -241,11 +261,12 @@
             <% } %>
 
             <% listaUsers.forEach(function(u) { %>
+              <% const isAdminRow = (u.role || "").toLowerCase() === "administrador"; %>
               <tr>
                 <td><strong><%= u.nome %></strong></td>
                 <td><%= u.email || "Sem e-mail" %></td>
                 <td>
-                  <% if ((u.role || "").toLowerCase() === "administrador") { %>
+                  <% if (isAdminRow) { %>
                     <span class="badge-admin">Administrador</span>
                   <% } else { %>
                     <span class="badge-user">Utilizador</span>
@@ -254,7 +275,6 @@
                 <td>
                   <%
                     const agoraAdmin = new Date();
-                    const isAdminRow = (u.role || "").toLowerCase() === "administrador";
                     const pagoAtivoRow = u.statusSubscricao === "ativo" && u.pagoAte && new Date(u.pagoAte) > agoraAdmin;
                     const trialDateRow = u.trialEndsAt ? new Date(u.trialEndsAt) : null;
                     const diasRestantesRow = trialDateRow
@@ -273,9 +293,24 @@
                 </td>
                 <td>
                   <div class="acoes-linha">
+                    <% if (!isAdminRow) { %>
+                      <form action="/admin/utilizadores/<%= u._id %>/renovar-teste" method="POST">
+                        <input
+                          type="number"
+                          name="dias"
+                          value="7"
+                          min="1"
+                          max="365"
+                          class="input-dias"
+                          title="Número de dias de gratuidade a adicionar"
+                        />
+                        <button type="submit" class="btn btn-renovar">Renovar Dias</button>
+                      </form>
+                    <% } %>
+
                     <form action="/admin/utilizadores/<%= u._id %>/role" method="POST">
                       <button type="submit" class="btn btn-secundario">
-                        <%= (u.role || "").toLowerCase() === "administrador" ? "Tornar Utilizador" : "Tornar Admin" %>
+                        <%= isAdminRow ? "Tornar Utilizador" : "Tornar Admin" %>
                       </button>
                     </form>
 

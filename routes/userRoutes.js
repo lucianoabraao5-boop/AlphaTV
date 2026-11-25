@@ -68,6 +68,44 @@ router.get("/admin", verificarAdmin, async (req, res) => {
   }
 });
 
+// Renovar / adicionar dias de gratuidade ao utilizador
+router.post(
+  "/admin/utilizadores/:id/renovar-teste",
+  verificarAdmin,
+  async (req, res) => {
+    try {
+      const alvo = await User.findById(req.params.id);
+      if (!alvo) {
+        return res.redirect("/admin");
+      }
+
+      const diasRaw = parseInt(req.body.dias, 10);
+      const diasGratuitos =
+        Number.isFinite(diasRaw) && diasRaw > 0 ? diasRaw : 7;
+
+      const agora = new Date();
+      const trialAtual = alvo.trialEndsAt ? new Date(alvo.trialEndsAt) : null;
+      const baseData =
+        trialAtual && trialAtual > agora
+          ? trialAtual.getTime()
+          : agora.getTime();
+
+      alvo.trialEndsAt = new Date(
+        baseData + diasGratuitos * 24 * 60 * 60 * 1000,
+      );
+      if (alvo.statusSubscricao === "expirado") {
+        alvo.statusSubscricao = "trial";
+      }
+
+      await alvo.save();
+      return res.redirect("/admin");
+    } catch (erro) {
+      console.error("Erro ao renovar dias de gratuidade:", erro);
+      return res.redirect("/admin");
+    }
+  },
+);
+
 // Alternar perfil (Utilizador <-> Administrador)
 router.post(
   "/admin/utilizadores/:id/role",
