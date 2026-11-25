@@ -1,66 +1,232 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8">
-    <title>Painel Admin | AlphaTV</title>
-    <style>
-        body { background-color: #0d1117; color: #c9d1d9; font-family: Arial, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .header { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { color: #58a6ff; margin: 0; font-size: 1.8rem; }
-        .btn-voltar { background-color: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; }
-        .btn-voltar:hover { background-color: #30363d; color: #58a6ff; }
-        .card { background-color: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 8px; width: 100%; max-width: 600px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        h2 { color: #58a6ff; text-align: center; margin-top: 0; }
-        input { width: 100%; padding: 10px; margin: 8px 0; background-color: #0d1117; border: 1px solid #30363d; color: white; border-radius: 4px; box-sizing: border-box; }
-        button { background-color: #1f6feb; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px; }
-        button:hover { background-color: #388bfd; }
-        .video-item { padding: 12px; border-bottom: 1px solid #30363d; display: flex; flex-direction: column; gap: 4px; }
-        .video-item:last-child { border-bottom: none; }
-        .acoes { display: flex; gap: 10px; margin-top: 8px; }
-        .btn-apagar { background-color: #da3633; padding: 5px 12px; text-decoration: none; border-radius: 4px; font-size: 0.85rem; color: white; text-align: center; display: inline-block; }
-        .btn-editar { background-color: #238636; padding: 5px 12px; text-decoration: none; border-radius: 4px; font-size: 0.85rem; color: white; text-align: center; display: inline-block; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlphaTV | Painel de Administração</title>
+  <style>
+    body {
+      background-color: #070b14;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      padding: 14px 24px;
+    }
+    .marca {
+      color: #38bdf8;
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+    .acoes-topo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn, a.btn {
+      background: #0284c7;
+      color: #ffffff;
+      text-decoration: none;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+    .btn:hover, a.btn:hover {
+      background: #0ea5e9;
+    }
+    .btn-sair {
+      background: #7f1d1d;
+    }
+    .btn-sair:hover {
+      background: #991b1b;
+    }
+    .btn-secundario {
+      background: #1e293b;
+      border: 1px solid #334155;
+    }
+    .btn-secundario:hover {
+      background: #334155;
+    }
+    main {
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 22px;
+      box-shadow: 0 0 24px rgba(0, 180, 255, 0.1);
+    }
+    .cabecalho-lista {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .cabecalho-lista h2 {
+      margin: 0;
+      color: #38bdf8;
+    }
+    .filtro-input {
+      padding: 9px 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #f8fafc;
+      min-width: 240px;
+    }
+    .tabela-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid #1e293b;
+    }
+    th {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tr:hover {
+      background: rgba(30, 41, 59, 0.45);
+    }
+    .badge-admin {
+      background: #082f49;
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+    }
+    .badge-user {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #475569;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+    }
+    .acoes-linha {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .acoes-linha form {
+      margin: 0;
+    }
+  </style>
 </head>
 <body>
-
-    <div class="header">
-        <h1>Painel de Controlo ⚙️</h1>
-        <a href="/" class="btn-voltar">← Ver Catálogo Público</a>
+  <header>
+    <div class="marca">AlphaTV • Administração</div>
+    <div class="acoes-topo">
+      <span>Admin: <strong><%= utilizador.nome %></strong></span>
+      <a href="/player" class="btn">Ir para o Player</a>
+      <a href="/logout" class="btn btn-sair">Sair</a>
     </div>
+  </header>
 
+  <main>
     <div class="card">
-        <h2>Adicionar Novo Canal</h2>
-        <form action="/videos/adicionar" method="POST">
-            <input type="text" name="titulo" placeholder="Título do Canal (ex: RTP1)" required>
-            <input type="text" name="categoria" placeholder="Categoria (ex: Notícias)" required>
-            <input type="text" name="urlStream" placeholder="URL do Stream (.m3u8)" required>
-            <!-- Campos EPG corrigidos -->
-            <input type="text" name="programaAtual" placeholder="Programa em Exibição (ex: Telejornal)">
-            <input type="text" name="horario" placeholder="Horário (ex: 20:00 - 21:00)">
-            <button type="submit">Guardar na Nuvem</button>
-        </form>
-    </div>
+      <div class="cabecalho-lista">
+        <h2>Utilizadores Registados (<%= utilizadores.length %>)</h2>
+        <input
+          type="text"
+          id="pesquisaUser"
+          class="filtro-input"
+          placeholder="Filtrar por nome ou e-mail..."
+          onkeyup="filtrarTabela()"
+        />
+      </div>
 
-    <div class="card">
-        <h2>Gestão de Canais Guardados (<%= videos.length %>)</h2>
-        <% if (videos.length === 0) { %>
-            <p style="text-align: center; color: #8b949e;">Sem canais registados.</p>
-        <% } else { %>
-            <% videos.forEach(video => { %>
-                <div class="video-item">
-                    <strong style="color: #ffffff;"><%= video.titulo %></strong>
-                    <span style="font-size: 0.9rem; color: #8b949e;">Categoria: <%= video.categoria %></span>
-                    <span style="font-size: 0.85rem; color: #3fb950;">Programa: <%= video.programaAtual || 'N/D' %> (<%= video.horario || 'N/D' %>)</span>
-                    <small style="color: #58a6ff; word-break: break-all;"><%= video.urlStream %></small>
-                    
-                    <div class="acoes">
-                        <a href="/videos/editar/<%= video._id %>" class="btn-editar">Editar</a>
-                        <a href="/videos/apagar/<%= video._id %>" class="btn-apagar">Apagar</a>
-                    </div>
-                </div>
+      <div class="tabela-wrap">
+        <table id="tabelaUtilizadores">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Perfil</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (utilizadores.length === 0) { %>
+              <tr>
+                <td colspan="4" style="color: #94a3b8; text-align: center;">
+                  Nenhum utilizador encontrado na base de dados.
+                </td>
+              </tr>
+            <% } %>
+
+            <% utilizadores.forEach(u => { %>
+              <tr>
+                <td><strong><%= u.nome %></strong></td>
+                <td><%= u.email || "Sem e-mail" %></td>
+                <td>
+                  <% if (u.role === "Administrador") { %>
+                    <span class="badge-admin">Administrador</span>
+                  <% } else { %>
+                    <span class="badge-user">Utilizador</span>
+                  <% } %>
+                </td>
+                <td>
+                  <div class="acoes-linha">
+                    <form action="/admin/utilizadores/<%= u._id %>/role" method="POST">
+                      <button type="submit" class="btn btn-secundario">
+                        <%= u.role === "Administrador" ? "Tornar Utilizador" : "Tornar Admin" %>
+                      </button>
+                    </form>
+
+                    <% if (String(u._id) !== String(utilizador.id)) { %>
+                      <form
+                        action="/admin/utilizadores/<%= u._id %>/apagar"
+                        method="POST"
+                        onsubmit="return confirm('Tens a certeza que queres apagar este utilizador?');"
+                      >
+                        <button type="submit" class="btn btn-sair">Apagar</button>
+                      </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
             <% }) %>
-        <% } %>
+          </tbody>
+        </table>
+      </div>
     </div>
+  </main>
 
+  <script>
+    function filtrarTabela() {
+      const termo = document.getElementById("pesquisaUser").value.toLowerCase();
+      const linhas = document.querySelectorAll("#tabelaUtilizadores tbody tr");
+      linhas.forEach(linha => {
+        const texto = linha.textContent.toLowerCase();
+        linha.style.display = texto.includes(termo) ? "" : "none";
+      });
+    }
+  </script>
 </body>
 </html>
