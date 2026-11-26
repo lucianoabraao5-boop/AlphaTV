@@ -43,3 +43,11 @@ app.use("/", videoRoutes);
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor a correr na porta ${PORT}`);
 });
+const path = require("path");
+
+app.get("/js/qrcode.min.js", (req, res) => {
+  res.type("application/javascript");
+  res.sendFile(
+    path.join(__dirname, "node_modules", "qrcode", "build", "qrcode.min.js"),
+  );
+});

@@ -264,7 +264,9 @@
       border-radius: 8px;
     }
   </style>
-</head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
+    </script>
+</head> 
 <body>
   <div class="tv-bg" aria-hidden="true">
     <div class="tv-pulse-grid"></div>
@@ -381,7 +383,7 @@
       </p>
     </div>
   </div>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+
   <script>
     let ultimoPayloadQrTexto = "";
 
@@ -631,30 +633,36 @@
 
       if (!texto) return;
 
-      if (window.QRCode && typeof window.QRCode.toCanvas === "function") {
-        window.QRCode.toCanvas(
-          canvas,
-          String(texto),
-          {
-            width: canvas.width,
-            margin: 2,
-            errorCorrectionLevel: "M",
-            color: {
-              dark: "#000000",
-              light: "#ffffff",
+      const tentarDesenhar = (tentativas = 0) => {
+        if (window.QRCode && typeof window.QRCode.toCanvas === "function") {
+          window.QRCode.toCanvas(
+            canvas,
+            String(texto),
+            {
+              width: canvas.width,
+              margin: 2,
+              errorCorrectionLevel: "M",
+              color: {
+                dark: "#000000",
+                light: "#ffffff",
+              },
             },
-          },
-          function (err) {
-            if (err) {
-              console.error("Erro ao gerar QR Code real:", err);
+            function (err) {
+              if (err) {
+                console.error("Erro ao gerar QR Code:", err);
+              }
             }
-          }
-        );
-      } else {
-        console.error("Biblioteca QRCode não carregada.");
-      }
+          );
+        } else if (tentativas < 20) {
+          setTimeout(() => tentarDesenhar(tentativas + 1), 100);
+        } else {
+          console.error("Biblioteca QRCode não carregada de /js/qrcode.min.js");
+        }
+      };
+
+      tentarDesenhar();
     }
-    
+
     function renderizarDadosQr(dados) {
       const boxAtivo = document.getElementById("qrConteudoAtivo");
       const msgSemDados = document.getElementById("qrSemDadosMsg");
