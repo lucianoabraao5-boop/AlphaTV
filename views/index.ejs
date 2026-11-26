@@ -380,27 +380,6 @@
         Inicia sessão e faz <strong>Logout</strong> para gerar o <strong>QR Code</strong> com os dados da conta.
       </p>
     </div>
-
-      <div id="qrConteudoAtivo" class="qr-box" style="<%= qrObj ? '' : 'display:none;' %>">
-        <div class="qr-canvas-wrap">
-          <canvas id="qrCanvas" width="220" height="220"></canvas>
-        </div>
-        <div class="qr-meta" id="qrDetalhesLista">
-          <div><strong>Informações codificadas no QR Code:</strong></div>
-          <p style="color:#94a3b8; margin:6px 0 10px 0;">
-            Os dados da conta estão codificados no QR Code gerado no logout. Clique abaixo para ler/revelar os dados codificados no QR Code.
-          </p>
-          <button type="button" class="btn" style="margin-top:6px; width:auto;" onclick="lerConteudoQrNoEcra()">
-            Ler dados a partir do QR Code
-          </button>
-          <div id="qrDadosDecodificados" style="margin-top:12px; display:none;"></div>
-        </div>
-      </div>
-
-      <p id="qrSemDadosMsg" style="color:#94a3b8; margin-top:10px; <%= qrObj ? 'display:none;' : '' %>">
-        Inicia sessão e faz <strong>Logout</strong> para gerar o <strong>QR Code</strong> com os dados da conta.
-      </p>
-    </div>
   </div>
 
   <script>
@@ -674,28 +653,17 @@
       }
     }
 
-        function renderizarDadosQr(dados) {
+    function renderizarDadosQr(dados) {
       const boxAtivo = document.getElementById("qrConteudoAtivo");
       const msgSemDados = document.getElementById("qrSemDadosMsg");
       const qrCanvas = document.getElementById("qrCanvas");
+      if (!boxAtivo || !qrCanvas || !dados || !dados.email) return;
+
       const urlRecuperacao =
         dados.qrUrl ||
         (window.location.origin + "/recuperar-senha?email=" + encodeURIComponent(dados.email));
 
       ultimoPayloadQrTexto = urlRecuperacao;
-      if (!boxAtivo || !qrCanvas || !dados || !dados.email) return;
-
-      const resumo = {
-        nome: dados.nome || "",
-        email: dados.email || "",
-        pais: dados.pais || "PT",
-        telefone: dados.telefone || "",
-        role: dados.role || "Utilizador",
-        statusSubscricao: dados.statusSubscricao || "trial",
-        pagoAte: dados.pagoAte || null,
-        codigoPromocional: dados.codigoPromocional || null,
-      };
-      ultimoPayloadQrTexto = JSON.stringify(resumo);
 
       if (msgSemDados) msgSemDados.style.display = "none";
       boxAtivo.style.display = "flex";
@@ -703,7 +671,7 @@
 
       const loginEmailInput = document.getElementById("loginEmail");
       if (loginEmailInput && !loginEmailInput.value) {
-        loginEmailInput.value = resumo.email;
+        loginEmailInput.value = dados.email;
       }
     }
 

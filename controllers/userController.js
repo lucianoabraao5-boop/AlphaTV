@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const User = require("../models/User");
 const Compra = require("../models/Compra");
-const crypto = require("crypto");
 const {
   PLANOS_SUBSCRICAO,
   METODOS_PAGAMENTO,
@@ -175,13 +175,20 @@ async function login(req, res) {
 }
 
 async function logout(req, res) {
-  let qrUrlRecuperacao = null;
+  try {
+    const sessUser =
+      req.session && req.session.utilizador ? req.session.utilizador : null;
+    let dadosQr = null;
+    let qrUrlRecuperacao = null;
 
     if (sessUser && sessUser.id) {
       const userDoc = await User.findById(sessUser.id);
       if (userDoc) {
         const tokenBruto = crypto.randomBytes(20).toString("hex");
-        const tokenHash = crypto.createHash("sha256").update(tokenBruto).digest("hex");
+        const tokenHash = crypto
+          .createHash("sha256")
+          .update(tokenBruto)
+          .digest("hex");
 
         userDoc.resetTokenHash = tokenHash;
         userDoc.resetTokenExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
@@ -198,7 +205,9 @@ async function logout(req, res) {
           telefone: userDoc.telefone || "",
           role: userDoc.role || "Utilizador",
           statusSubscricao: userDoc.statusSubscricao || "trial",
-          pagoAte: userDoc.pagoAte ? new Date(userDoc.pagoAte).toISOString().slice(0, 10) : null,
+          pagoAte: userDoc.pagoAte
+            ? new Date(userDoc.pagoAte).toISOString().slice(0, 10)
+            : null,
           codigoPromocional:
             userDoc.codigoPromocionalLiberado && userDoc.codigoPromocional
               ? userDoc.codigoPromocional
@@ -208,6 +217,154 @@ async function logout(req, res) {
         };
       }
     }
+
+    if (dadosQr) {
+      const base64Payload = Buffer.from(
+        JSON.stringify(dadosQr),
+        "utf8",
+      ).toString("base64");
+      res.cookie("alphatv_qr_rec", base64Payload, {
+        maxAge: 24 * 60 * 60 * 1000,
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+      });
+    }
+
+    req.session.destroy(() => {
+      return res.redirect("/?qr=1");
+    });
+  } catch (erro) {
+    console.error("Erro no logout:", erro);
+    req.session.destroy(() => {
+      return res.redirect("/");
+    });
+  }
+}
+
+async function mostrarNovaSenha(req, res) {
+  try {
+    const token = String(req.query.token || "").trim();
+    const email = String(req.query.email || "")
+      .trim()
+      .toLowerCase();
+
+    if (!token || !email) {
+      return res.status(400).render("nova-senha", {
+        erro: "Link de recuperação inválido ou incompleto. Gere um novo QR Code fazendo logout.",
+        sucesso: null,
+        token: "",
+        email: "",
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      email,
+      resetTokenHash: tokenHash,
+      resetTokenExpiresAt: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).render("nova-senha", {
+        erro: "Este link de QR Code expirou ou já foi utilizado. Faça logout novamente para gerar outro.",
+        sucesso: null,
+        token: "",
+        email: "",
+      });
+    }
+
+    return res.render("nova-senha", {
+      erro: null,
+      sucesso: null,
+      token,
+      email: user.email,
+    });
+  } catch (erro) {
+    console.error("Erro ao abrir /recuperar-senha:", erro);
+    return res.status(500).render("nova-senha", {
+      erro: "Erro interno ao validar o QR Code de recuperação.",
+      sucesso: null,
+      token: "",
+      email: "",
+    });
+  }
+}
+
+async function salvarNovaSenha(req, res) {
+  try {
+    const token = String(req.body.token || "").trim();
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+    const novaSenha = String(req.body.novaSenha || "");
+    const confirmarSenha = String(req.body.confirmarSenha || "");
+
+    if (!token || !email) {
+      return res.status(400).render("nova-senha", {
+        erro: "Token de recuperação inválido.",
+        sucesso: null,
+        token: "",
+        email: "",
+      });
+    }
+
+    if (novaSenha.length < 4) {
+      return res.status(400).render("nova-senha", {
+        erro: "A nova senha deve ter pelo menos 4 caracteres.",
+        sucesso: null,
+        token,
+        email,
+      });
+    }
+
+    if (novaSenha !== confirmarSenha) {
+      return res.status(400).render("nova-senha", {
+        erro: "A confirmação da nova senha não coincide.",
+        sucesso: null,
+        token,
+        email,
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      email,
+      resetTokenHash: tokenHash,
+      resetTokenExpiresAt: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).render("nova-senha", {
+        erro: "Link expirado ou inválido. Gere um novo QR Code fazendo logout.",
+        sucesso: null,
+        token: "",
+        email: "",
+      });
+    }
+
+    user.password = await bcrypt.hash(novaSenha, 10);
+    user.resetTokenHash = null;
+    user.resetTokenExpiresAt = null;
+    await user.save();
+
+    return res.render("nova-senha", {
+      erro: null,
+      sucesso:
+        "Nova senha guardada com sucesso! Já pode entrar na conta com o seu e-mail e nova senha.",
+      token: "",
+      email: user.email,
+    });
+  } catch (erro) {
+    console.error("Erro ao salvar nova senha:", erro);
+    return res.status(500).render("nova-senha", {
+      erro: "Erro ao atualizar a senha.",
+      sucesso: null,
+      token,
+      email,
+    });
+  }
+}
 
 async function mostrarSubscricao(req, res) {
   try {
@@ -399,127 +556,11 @@ module.exports = {
   cadastrar,
   login,
   logout,
+  mostrarNovaSenha,
+  salvarNovaSenha,
   mostrarSubscricao,
   iniciarPagamento,
   confirmarPagamento,
   verRecibo,
   gerarCodigoConviteUtilizador,
 };
-async function mostrarNovaSenha(req, res) {
-  try {
-    const token = String(req.query.token || "").trim();
-    const email = String(req.query.email || "").trim().toLowerCase();
-
-    if (!token || !email) {
-      return res.status(400).render("nova-senha", {
-        erro: "Link de recuperação inválido ou incompleto. Gere um novo QR Code fazendo logout.",
-        sucesso: null,
-        token: "",
-        email: "",
-      });
-    }
-
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const user = await User.findOne({
-      email,
-      resetTokenHash: tokenHash,
-      resetTokenExpiresAt: { $gt: new Date() },
-    });
-
-    if (!user) {
-      return res.status(400).render("nova-senha", {
-        erro: "Este link de QR Code expirou ou já foi utilizado. Faça logout novamente para gerar outro.",
-        sucesso: null,
-        token: "",
-        email: "",
-      });
-    }
-
-    return res.render("nova-senha", {
-      erro: null,
-      sucesso: null,
-      token,
-      email: user.email,
-    });
-  } catch (erro) {
-    console.error("Erro ao abrir /recuperar-senha:", erro);
-    return res.status(500).render("nova-senha", {
-      erro: "Erro interno ao validar o QR Code de recuperação.",
-      sucesso: null,
-      token: "",
-      email: "",
-    });
-  }
-}
-
-async function salvarNovaSenha(req, res) {
-  try {
-    const token = String(req.body.token || "").trim();
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const novaSenha = String(req.body.novaSenha || "");
-    const confirmarSenha = String(req.body.confirmarSenha || "");
-
-    if (!token || !email) {
-      return res.status(400).render("nova-senha", {
-        erro: "Token de recuperação inválido.",
-        sucesso: null,
-        token: "",
-        email: "",
-      });
-    }
-
-    if (novaSenha.length < 4) {
-      return res.status(400).render("nova-senha", {
-        erro: "A nova senha deve ter pelo menos 4 caracteres.",
-        sucesso: null,
-        token,
-        email,
-      });
-    }
-
-    if (novaSenha !== confirmarSenha) {
-      return res.status(400).render("nova-senha", {
-        erro: "A confirmação da nova senha não coincide.",
-        sucesso: null,
-        token,
-        email,
-      });
-    }
-
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const user = await User.findOne({
-      email,
-      resetTokenHash: tokenHash,
-      resetTokenExpiresAt: { $gt: new Date() },
-    });
-
-    if (!user) {
-      return res.status(400).render("nova-senha", {
-        erro: "Link expirado ou inválido. Gere um novo QR Code fazendo logout.",
-        sucesso: null,
-        token: "",
-        email: "",
-      });
-    }
-
-    user.password = await bcrypt.hash(novaSenha, 10);
-    user.resetTokenHash = null;
-    user.resetTokenExpiresAt = null;
-    await user.save();
-
-    return res.render("nova-senha", {
-      erro: null,
-      sucesso: "Nova senha guardada com sucesso! Já pode entrar na conta com o seu e-mail e nova senha.",
-      token: "",
-      email: user.email,
-    });
-  } catch (erro) {
-    console.error("Erro ao salvar nova senha:", erro);
-    return res.status(500).render("nova-senha", {
-      erro: "Erro ao atualizar a senha.",
-      sucesso: null,
-      token,
-      email,
-    });
-  }
-}
