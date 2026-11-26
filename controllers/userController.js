@@ -30,7 +30,10 @@ function obterIpLocalRede() {
 }
 
 function construirBaseUrlAcessivel(req) {
-  const protocolo = req.get("x-forwarded-proto") || req.protocol || "http";
+  const xfProto = String(req.get("x-forwarded-proto") || "")
+    .split(",")[0]
+    .trim();
+  const protocolo = xfProto || req.protocol || "http";
   const hostAtual = String(req.get("host") || "localhost:3000").trim();
 
   if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(hostAtual)) {
@@ -38,7 +41,7 @@ function construirBaseUrlAcessivel(req) {
     if (ipLocal) {
       const portaMatch = hostAtual.match(/:(\d+)$/);
       const porta = portaMatch ? portaMatch[1] : "3000";
-      return `${protocolo}://${ipLocal}:${porta}`;
+      return `http://${ipLocal}:${porta}`;
     }
   }
 
@@ -253,10 +256,14 @@ async function logout(req, res) {
         JSON.stringify(dadosQr),
         "utf8",
       ).toString("base64");
+      const ehHttps = String(req.get("x-forwarded-proto") || req.protocol || "")
+        .toLowerCase()
+        .includes("https");
       res.cookie("alphatv_qr_rec", base64Payload, {
         maxAge: 24 * 60 * 60 * 1000,
         httpOnly: false,
         sameSite: "lax",
+        secure: ehHttps,
         path: "/",
       });
     }

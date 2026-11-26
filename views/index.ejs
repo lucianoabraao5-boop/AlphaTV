@@ -370,7 +370,7 @@
           <canvas id="qrCanvas" width="220" height="220"></canvas>
         </div>
         <div class="qr-meta" id="qrDetalhesLista">
-          <div><strong>Recuperação e Nova Senha via QR Code</strong></div>
+          <div><strong>Redefinir Senha via QR Code</strong></div>
           <p style="color:#94a3b8; margin:6px 0 0 0;">
             Leia este QR Code com a câmara do telemóvel para abrir a página e criar uma nova senha para a conta.
           </p>
@@ -385,6 +385,14 @@
 
   <script>
     let ultimoPayloadQrTexto = "";
+
+    function escaparHtml(valor) {
+      return String(valor || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
 
     function alternarRecuperacao(mostrar) {
       const painel = document.getElementById("painelRecuperacao");
@@ -463,13 +471,37 @@
       const boxAtivo = document.getElementById("qrConteudoAtivo");
       const msgSemDados = document.getElementById("qrSemDadosMsg");
       const qrCanvas = document.getElementById("qrCanvas");
+      const detalhesEl = document.getElementById("qrDetalhesLista");
       if (!boxAtivo || !qrCanvas || !dados || !dados.email) return;
 
-      const urlRecuperacao =
-        dados.qrUrl ||
-        (window.location.origin + "/recuperar-senha?email=" + encodeURIComponent(dados.email));
+      const baseRecuperacao =
+        window.location.origin +
+        "/recuperar-senha?email=" +
+        encodeURIComponent(dados.email) +
+        (dados.token ? "&token=" + encodeURIComponent(dados.token) : "");
 
+      const urlRecuperacao = dados.qrUrl || baseRecuperacao;
       ultimoPayloadQrTexto = urlRecuperacao;
+
+      if (detalhesEl) {
+        const expiraTexto = dados.expiraEm || "30 minutos";
+        const emailEscapado = escaparHtml(dados.email);
+        const expiraEscapado = escaparHtml(expiraTexto);
+        const urlEscapado = escaparHtml(urlRecuperacao);
+
+        detalhesEl.innerHTML =
+          "<div><strong>Redefinir Senha via QR Code</strong></div>" +
+          "<div style=\"margin-top:6px;\"><strong>Conta:</strong> " + emailEscapado + "</div>" +
+          "<div><strong>Validade do link:</strong> " + expiraEscapado + "</div>" +
+          "<p style=\"color:#94a3b8; margin:8px 0 0 0;\">" +
+          "Leia este QR Code com a câmara do telemóvel para abrir a página e criar uma nova senha." +
+          "</p>" +
+          "<div style=\"margin-top:8px;\">" +
+          "<a href=\"" + urlEscapado + "\" style=\"color:#38bdf8; word-break:break-all; font-size:0.82rem;\">" +
+          urlEscapado +
+          "</a>" +
+          "</div>";
+      }
 
       if (msgSemDados) msgSemDados.style.display = "none";
       boxAtivo.style.display = "flex";
