@@ -12,21 +12,12 @@ const {
   verificarAdmin,
 } = require("../authMiddlewares/authMiddleware");
 
-// Acesso e recuperação por telefone segundo país (PT / BR / OUTROS)
+// Acesso e recuperação por QR Code disponibilizado no logout
 router.get("/", userController.mostrarPaginaAcesso);
 router.get("/login", userController.mostrarPaginaAcesso);
 router.post("/cadastrar", userController.cadastrar);
 router.post("/login", userController.login);
 router.get("/logout", userController.logout);
-
-router.post(
-  "/recuperar/enviar-codigo",
-  userController.solicitarRecuperacaoTelefone,
-);
-router.post(
-  "/recuperar/confirmar",
-  userController.confirmarRecuperacaoTelefone,
-);
 
 // Planos (30, 60, 90, 180 dias), pagamento + confirmação, recibo e código promocional
 router.get("/subscricao", verificarSessao, userController.mostrarSubscricao);

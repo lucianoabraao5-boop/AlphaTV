@@ -283,7 +283,7 @@
 
     <div class="topo">
       <div class="marca">AlphaTV</div>
-      <div style="font-size: 0.86rem; color: #94a3b8;">7 dias gratuitos • Recuperação por QR Code no logout</div>
+      <div style="font-size: 0.86rem; color: #94a3b8;">7 dias gratuitos • Dados em QR Code no Logout</div>
     </div>
 
     <% if (typeof erro !== "undefined" && erro) { %>
@@ -317,7 +317,7 @@
         </form>
 
         <div class="barra-recuperar">
-          <span style="color:#94a3b8;">Consultar dados / QR da conta?</span>
+          <span style="color:#94a3b8;">Ver dados / QR da conta?</span>
           <button type="button" class="link-recuperar" onclick="alternarRecuperacao(true)">
             Recuperar acesso
           </button>
@@ -370,22 +370,23 @@
             <canvas id="qrCanvas" width="180" height="180"></canvas>
           </div>
           <div class="qr-meta">
-            <div><strong>Dados da última sessão (Logout):</strong></div>
+            <div><strong>Dados da conta (disponíveis após Logout):</strong></div>
             <div>Nome: <strong><%= qrObj.nome %></strong></div>
             <div>E-mail: <strong><%= qrObj.email %></strong></div>
             <div>País / Telefone: <strong><%= qrObj.pais %></strong> <%= qrObj.telefone ? ("• " + qrObj.telefone) : "" %></div>
-            <div>Estado: <strong><%= qrObj.statusSubscricao %></strong><%= qrObj.pagoAte ? (" (até " + qrObj.pagoAte + ")") : "" %></div>
+            <div>Perfil: <strong><%= qrObj.role %></strong></div>
+            <div>Subscrição: <strong><%= qrObj.statusSubscricao %></strong><%= qrObj.pagoAte ? (" (até " + qrObj.pagoAte + ")") : "" %></div>
             <% if (qrObj.codigoPromocional) { %>
               <div>Código Promocional: <strong style="color:#38bdf8;"><%= qrObj.codigoPromocional %></strong></div>
             <% } %>
             <div style="margin-top:10px; font-size:0.78rem; color:#94a3b8; word-break:break-all;">
-              Conteúdo QR: <span id="qrPayloadTexto"><%= JSON.stringify({ nome: qrObj.nome, email: qrObj.email, pais: qrObj.pais, telefone: qrObj.telefone, codigoPromocional: qrObj.codigoPromocional || null }) %></span>
+              Conteúdo QR: <span id="qrPayloadTexto"><%= JSON.stringify({ nome: qrObj.nome, email: qrObj.email, pais: qrObj.pais, telefone: qrObj.telefone, role: qrObj.role, statusSubscricao: qrObj.statusSubscricao, pagoAte: qrObj.pagoAte, codigoPromocional: qrObj.codigoPromocional || null }) %></span>
             </div>
           </div>
         </div>
       <% } else { %>
         <p style="color:#94a3b8; margin-top:10px;">
-          Inicia sessão e faz <strong>Sair (Logout)</strong> para gerar e disponibilizar aqui o QR Code com os dados da tua conta.
+          Inicia sessão e faz <strong>Logout</strong> para disponibilizar aqui os dados da conta em formato de <strong>QR Code</strong>.
         </p>
       <% } %>
     </div>

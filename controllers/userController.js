@@ -6,72 +6,77 @@ const {
   METODOS_PAGAMENTO,
   obterPlano,
   normalizarTelefonePorPais,
-  gerarCodigoVerificacao,
   gerarCodigoPromocional,
   gerarCodigoRecibo,
   gerarReferenciaPagamento,
-  enviarMensagemRecuperacao,
 } = require("../services/alphaService");
 
 function isAdminRole(role) {
   return String(role || "").toLowerCase() === "administrador";
 }
 
-function renderIndex(req, res, statusCode, dados = {}) {
-  return res.status(statusCode).render("index", {
-    erro: dados.erro || null,
-    sucesso: dados.sucesso || null,
-    codigoDemo: dados.codigoDemo || null,
-    passoRecuperacao: dados.passoRecuperacao || "solicitar",
-    dadosRecuperacao: dados.dadosRecuperacao || {
-      pais: "PT",
-      telefone: "",
-      email: "",
-    },
-  });
-}
-function lerCookieQr(req) {
-  const headerCookie = req.headers && req.headers.cookie ? req.headers.cookie : "";
+function lerQrCookie(req) {
+  if (req.cookies && req.cookies.alphatv_qr_rec) {
+    try {
+      const texto = Buffer.from(
+        String(req.cookies.alphatv_qr_rec),
+        "base64",
+      ).toString("utf8");
+      return JSON.parse(texto);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const headerCookie =
+    req.headers && req.headers.cookie ? req.headers.cookie : "";
   const match = headerCookie.match(/(?:^|;\s*)alphatv_qr_rec=([^;]+)/);
   if (!match) return null;
+
   try {
-    const jsonStr = Buffer.from(decodeURIComponent(match[1]), "base64").toString("utf8");
-    return JSON.parse(jsonStr);
+    const texto = Buffer.from(decodeURIComponent(match[1]), "base64").toString(
+      "utf8",
+    );
+    return JSON.parse(texto);
   } catch (e) {
     return null;
   }
 }
 
+function renderIndex(req, res, statusCode, dados = {}) {
+  const qrDados =
+    dados.qrDados !== undefined ? dados.qrDados : lerQrCookie(req);
+  return res.status(statusCode).render("index", {
+    erro: dados.erro || null,
+    sucesso: dados.sucesso || null,
+    qrDados,
+    abrirQrInicial: Boolean(dados.abrirQrInicial),
+  });
+}
+
 function mostrarPaginaAcesso(req, res) {
-  let qrDados = null;
-  const rawCookie = req.cookies && req.cookies.alphatv_qr_rec ? req.cookies.alphatv_qr_rec : null;
-
-  if (rawCookie) {
-    try {
-      const decodificado = Buffer.from(String(rawCookie), "base64").toString("utf8");
-      qrDados = JSON.parse(decodificado);
-    } catch (e) {
-      qrDados = null;
-    }
-  }
-
-  
+  const qrDados = lerQrCookie(req);
   return renderIndex(req, res, 200, {
     qrDados,
     abrirQrInicial: Boolean(qrDados && req.query && req.query.qr === "1"),
   });
 }
 
+async function cadastrar(req, res) {
+  try {
+    const { nome, email, password, pais, telefone, codigoConvite } = req.body;
+
+    if (!nome || !email || !password) {
+      return renderIndex(req, res, 400, {
+        erro: "Preencha nome, e-mail e palavra-passe.",
+      });
+    }
+
     const emailLimpo = String(email).trim().toLowerCase();
     const existente = await User.findOne({ email: emailLimpo });
     if (existente) {
       return renderIndex(req, res, 400, {
         erro: "Já existe uma conta registada com este e-mail.",
-        dadosRecuperacao: {
-          pais: pais || "PT",
-          telefone: telefone || "",
-          email: emailLimpo,
-        },
       });
     }
 
@@ -79,11 +84,6 @@ function mostrarPaginaAcesso(req, res) {
     if (!telValidado.valido) {
       return renderIndex(req, res, 400, {
         erro: telValidado.erro,
-        dadosRecuperacao: {
-          pais: pais || "PT",
-          telefone: telefone || "",
-          email: emailLimpo,
-        },
       });
     }
 
@@ -143,7 +143,6 @@ async function login(req, res) {
     if (!user) {
       return renderIndex(req, res, 401, {
         erro: "E-mail ou palavra-passe inválidos.",
-        dadosRecuperacao: { pais: "PT", telefone: "", email: emailLimpo },
       });
     }
 
@@ -154,11 +153,6 @@ async function login(req, res) {
     if (!senhaCorreta) {
       return renderIndex(req, res, 401, {
         erro: "E-mail ou palavra-passe inválidos.",
-        dadosRecuperacao: {
-          pais: user.pais || "PT",
-          telefone: user.telefone || "",
-          email: emailLimpo,
-        },
       });
     }
 
@@ -181,34 +175,43 @@ async function login(req, res) {
 
 async function logout(req, res) {
   try {
-    const sessUser = req.session && req.session.utilizador ? req.session.utilizador : null;
+    const sessUser =
+      req.session && req.session.utilizador ? req.session.utilizador : null;
     let dadosQr = null;
 
     if (sessUser && sessUser.id) {
       const userDoc = await User.findById(sessUser.id).lean();
       if (userDoc) {
         dadosQr = {
+          id: String(userDoc._id),
           nome: userDoc.nome,
           email: userDoc.email,
           pais: userDoc.pais || "PT",
           telefone: userDoc.telefone || "",
           role: userDoc.role || "Utilizador",
           statusSubscricao: userDoc.statusSubscricao || "trial",
-          pagoAte: userDoc.pagoAte ? new Date(userDoc.pagoAte).toISOString().slice(0, 10) : null,
+          pagoAte: userDoc.pagoAte
+            ? new Date(userDoc.pagoAte).toISOString().slice(0, 10)
+            : null,
           codigoPromocional:
             userDoc.codigoPromocionalLiberado && userDoc.codigoPromocional
               ? userDoc.codigoPromocional
               : null,
-          geradoEm: new Date().toISOString(),
+          logoutEm: new Date().toISOString(),
         };
       }
     }
 
     if (dadosQr) {
-      res.cookie("alphatv_qr_rec", Buffer.from(JSON.stringify(dadosQr)).toString("base64"), {
-        maxAge: 10 * 60 * 1000, // válido por 10 minutos após o logout
+      const base64Payload = Buffer.from(
+        JSON.stringify(dadosQr),
+        "utf8",
+      ).toString("base64");
+      res.cookie("alphatv_qr_rec", base64Payload, {
+        maxAge: 30 * 60 * 1000,
         httpOnly: false,
         sameSite: "lax",
+        path: "/",
       });
     }
 
@@ -216,100 +219,9 @@ async function logout(req, res) {
       return res.redirect("/?qr=1");
     });
   } catch (erro) {
-    console.error("Erro no logout com QR:", erro);
+    console.error("Erro no logout:", erro);
     req.session.destroy(() => {
       return res.redirect("/");
-    });
-  }
-}
-    const codigo = gerarCodigoVerificacao();
-    user.codigoRecuperacao = codigo;
-    user.codigoRecuperacaoExpira = new Date(Date.now() + 15 * 60 * 1000);
-    await user.save();
-
-    const envio = await enviarMensagemRecuperacao({
-      telefoneE164: telCheck.telefoneE164,
-      pais: telCheck.pais,
-      codigo,
-      nome: user.nome,
-    });
-
-    const mensagemSucesso = envio.enviadoExterno
-      ? `Código enviado por SMS para ${telCheck.telefoneE164} (${telCheck.pais}).`
-      : `Código gerado para ${telCheck.telefoneE164} (${telCheck.pais}) (SMS externo não entregue — em conta Trial da Twilio, verifique o número de destino na consola).`;
-
-    return renderIndex(req, res, 200, {
-      sucesso: mensagemSucesso,
-      codigoDemo: envio.enviadoExterno ? null : codigo,
-      passoRecuperacao: "confirmar",
-      dadosRecuperacao: {
-        pais: telCheck.pais,
-        telefone: telCheck.telefoneE164,
-        email: user.email,
-      },
-    });
-  } catch (erro) {
-    console.error("Erro ao solicitar recuperação:", erro);
-    return renderIndex(req, res, 500, {
-      erro: "Erro ao enviar mensagem de recuperação.",
-      passoRecuperacao: "solicitar",
-    });
-  }
-}
-
-async function confirmarRecuperacaoTelefone(req, res) {
-  try {
-    const { telefone, codigo, novaSenha } = req.body;
-    const telLimpo = String(telefone || "").trim();
-
-    if (!codigo || !novaSenha || String(novaSenha).length < 4) {
-      return renderIndex(req, res, 400, {
-        erro: "Informe o código recebido e uma nova palavra-passe (mínimo 4 caracteres).",
-        passoRecuperacao: "confirmar",
-        dadosRecuperacao: { pais: "PT", telefone: telLimpo, email: "" },
-      });
-    }
-
-    const user = await User.findOne({ telefone: telLimpo });
-    const agora = new Date();
-
-    if (
-      !user ||
-      !user.codigoRecuperacao ||
-      String(user.codigoRecuperacao).trim() !== String(codigo).trim() ||
-      !user.codigoRecuperacaoExpira ||
-      new Date(user.codigoRecuperacaoExpira) < agora
-    ) {
-      return renderIndex(req, res, 400, {
-        erro: "Código inválido ou expirado.",
-        passoRecuperacao: "confirmar",
-        dadosRecuperacao: {
-          pais: user ? user.pais : "PT",
-          telefone: telLimpo,
-          email: user ? user.email : "",
-        },
-      });
-    }
-
-    user.password = await bcrypt.hash(String(novaSenha), 10);
-    user.codigoRecuperacao = null;
-    user.codigoRecuperacaoExpira = null;
-    await user.save();
-
-    return renderIndex(req, res, 200, {
-      sucesso: "Palavra-passe redefinida com sucesso! Já podes iniciar sessão.",
-      passoRecuperacao: "solicitar",
-      dadosRecuperacao: {
-        pais: user.pais || "PT",
-        telefone: telLimpo,
-        email: user.email,
-      },
-    });
-  } catch (erro) {
-    console.error("Erro ao confirmar recuperação:", erro);
-    return renderIndex(req, res, 500, {
-      erro: "Erro ao redefinir a palavra-passe.",
-      passoRecuperacao: "confirmar",
     });
   }
 }
@@ -504,8 +416,6 @@ module.exports = {
   cadastrar,
   login,
   logout,
-  solicitarRecuperacaoTelefone,
-  confirmarRecuperacaoTelefone,
   mostrarSubscricao,
   iniciarPagamento,
   confirmarPagamento,
