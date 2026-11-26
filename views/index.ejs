@@ -240,7 +240,7 @@
 
     .qr-canvas-wrap {
       background: #ffffff;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       display: inline-flex;
       align-items: center;
@@ -360,39 +360,35 @@
 
     <div id="painelRecuperacao" class="card painel-recuperacao <%= mostrarQrInicial ? 'visivel' : '' %>">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <h2 style="margin:0;">Recuperar acesso • Dados em QR Code</h2>
+        <h2 style="margin:0;">Recuperar acesso • Dados via QR Code</h2>
         <button type="button" class="link-recuperar" onclick="alternarRecuperacao(false)">Ocultar</button>
       </div>
 
-      <% if (qrObj) { %>
-        <div class="qr-box">
-          <div class="qr-canvas-wrap">
-            <canvas id="qrCanvas" width="180" height="180"></canvas>
-          </div>
-          <div class="qr-meta">
-            <div><strong>Dados da conta (disponíveis após Logout):</strong></div>
-            <div>Nome: <strong><%= qrObj.nome %></strong></div>
-            <div>E-mail: <strong><%= qrObj.email %></strong></div>
-            <div>País / Telefone: <strong><%= qrObj.pais %></strong> <%= qrObj.telefone ? ("• " + qrObj.telefone) : "" %></div>
-            <div>Perfil: <strong><%= qrObj.role %></strong></div>
-            <div>Subscrição: <strong><%= qrObj.statusSubscricao %></strong><%= qrObj.pagoAte ? (" (até " + qrObj.pagoAte + ")") : "" %></div>
-            <% if (qrObj.codigoPromocional) { %>
-              <div>Código Promocional: <strong style="color:#38bdf8;"><%= qrObj.codigoPromocional %></strong></div>
-            <% } %>
-            <div style="margin-top:10px; font-size:0.78rem; color:#94a3b8; word-break:break-all;">
-              Conteúdo QR: <span id="qrPayloadTexto"><%= JSON.stringify({ nome: qrObj.nome, email: qrObj.email, pais: qrObj.pais, telefone: qrObj.telefone, role: qrObj.role, statusSubscricao: qrObj.statusSubscricao, pagoAte: qrObj.pagoAte, codigoPromocional: qrObj.codigoPromocional || null }) %></span>
-            </div>
-          </div>
+      <div id="qrConteudoAtivo" class="qr-box" style="<%= qrObj ? '' : 'display:none;' %>">
+        <div class="qr-canvas-wrap">
+          <canvas id="qrCanvas" width="220" height="220"></canvas>
         </div>
-      <% } else { %>
-        <p style="color:#94a3b8; margin-top:10px;">
-          Inicia sessão e faz <strong>Logout</strong> para disponibilizar aqui os dados da conta em formato de <strong>QR Code</strong>.
-        </p>
-      <% } %>
+        <div class="qr-meta" id="qrDetalhesLista">
+          <div><strong>Informações codificadas no QR Code:</strong></div>
+          <p style="color:#94a3b8; margin:6px 0 10px 0;">
+            Os dados da conta estão codificados no QR Code gerado no logout. Clique abaixo para ler/revelar os dados codificados no QR Code.
+          </p>
+          <button type="button" class="btn" style="margin-top:6px; width:auto;" onclick="lerConteudoQrNoEcra()">
+            Ler dados a partir do QR Code
+          </button>
+          <div id="qrDadosDecodificados" style="margin-top:12px; display:none;"></div>
+        </div>
+      </div>
+
+      <p id="qrSemDadosMsg" style="color:#94a3b8; margin-top:10px; <%= qrObj ? 'display:none;' : '' %>">
+        Inicia sessão e faz <strong>Logout</strong> para gerar o <strong>QR Code</strong> com os dados da conta.
+      </p>
     </div>
   </div>
 
   <script>
+    let ultimoPayloadQrTexto = "";
+
     function alternarRecuperacao(mostrar) {
       const painel = document.getElementById("painelRecuperacao");
       if (!painel) return;
@@ -426,56 +422,323 @@
       }
     }
 
-    function desenharQrSimbolico(canvas, texto) {
-      if (!canvas || !texto) return;
-      const ctx = canvas.getContext("2d");
-      const size = canvas.width;
-      const cells = 21;
-      const cell = Math.floor(size / cells);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, size, size);
+    // Codificador matricial QR Code (Versões 1 a 6, modo Byte UTF-8, nível L)
+    const QR_SPECS = [
+      null,
+      { version: 1, size: 21, dataBytes: 19, eccBytes: 7, align: [] },
+      { version: 2, size: 25, dataBytes: 34, eccBytes: 10, align: [18] },
+      { version: 3, size: 29, dataBytes: 55, eccBytes: 15, align: [22] },
+      { version: 4, size: 33, dataBytes: 80, eccBytes: 20, align: [26] },
+      { version: 5, size: 37, dataBytes: 108, eccBytes: 26, align: [30] },
+      { version: 6, size: 41, dataBytes: 136, eccBytes: 18, align: [34] },
+    ];
 
-      function desenharOlho(ox, oy) {
-        ctx.fillStyle = "#050811";
-        ctx.fillRect(ox * cell, oy * cell, 7 * cell, 7 * cell);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect((ox + 1) * cell, (oy + 1) * cell, 5 * cell, 5 * cell);
-        ctx.fillStyle = "#0284c7";
-        ctx.fillRect((ox + 2) * cell, (oy + 2) * cell, 3 * cell, 3 * cell);
+    const GF_EXP = new Array(512).fill(0);
+    const GF_LOG = new Array(256).fill(0);
+    (function initGF() {
+      let v = 1;
+      for (let i = 0; i < 255; i++) {
+        GF_EXP[i] = v;
+        GF_LOG[v] = i;
+        v <<= 1;
+        if (v & 0x100) v ^= 0x11d;
+      }
+      for (let i = 255; i < 512; i++) {
+        GF_EXP[i] = GF_EXP[i - 255];
+      }
+    })();
+
+    function gfMul(a, b) {
+      if (a === 0 || b === 0) return 0;
+      return GF_EXP[(GF_LOG[a] + GF_LOG[b]) % 255];
+    }
+
+    function calcularEcc(dataBytes, eccLen) {
+      let gen = [1];
+      for (let i = 0; i < eccLen; i++) {
+        const next = new Array(gen.length + 1).fill(0);
+        const factor = GF_EXP[i];
+        for (let j = 0; j < gen.length; j++) {
+          next[j] ^= gen[j];
+          next[j + 1] ^= gfMul(gen[j], factor);
+        }
+        gen = next;
       }
 
-      desenharOlho(0, 0);
-      desenharOlho(cells - 7, 0);
-      desenharOlho(0, cells - 7);
-
-      let hash = 2166136261;
-      for (let i = 0; i < texto.length; i++) {
-        hash ^= texto.charCodeAt(i);
-        hash = Math.imul(hash, 16777619);
-      }
-
-      for (let r = 0; r < cells; r++) {
-        for (let c = 0; c < cells; c++) {
-          const emOlhoSupEsq = r < 8 && c < 8;
-          const emOlhoSupDir = r < 8 && c >= cells - 8;
-          const emOlhoInfEsq = r >= cells - 8 && c < 8;
-          if (emOlhoSupEsq || emOlhoSupDir || emOlhoInfEsq) continue;
-
-          const idx = r * cells + c + texto.charCodeAt(r % texto.length);
-          const bit = ((hash >>> (idx % 24)) ^ (r * 31 + c * 17 + texto.charCodeAt(idx % texto.length))) & 1;
-          if (bit === 1) {
-            ctx.fillStyle = "#050811";
-            ctx.fillRect(c * cell, r * cell, cell, cell);
+      const msg = dataBytes.concat(new Array(eccLen).fill(0));
+      for (let i = 0; i < dataBytes.length; i++) {
+        const coef = msg[i];
+        if (coef !== 0) {
+          for (let j = 1; j < gen.length; j++) {
+            msg[i + j] ^= gfMul(gen[j], coef);
           }
         }
+      }
+      return msg.slice(dataBytes.length);
+    }
+
+    function construirMatrizQr(texto) {
+      const rawBytes = Array.from(new TextEncoder().encode(String(texto || "")));
+      let spec = QR_SPECS.find((s) => s && rawBytes.length <= s.dataBytes - 2);
+      let payloadBytes = rawBytes;
+
+      if (!spec) {
+        spec = QR_SPECS[6];
+        payloadBytes = rawBytes.slice(0, spec.dataBytes - 3);
+      }
+
+      const bits = [];
+      function pushBits(val, len) {
+        for (let i = len - 1; i >= 0; i--) {
+          bits.push((val >>> i) & 1);
+        }
+      }
+
+      pushBits(0b0100, 4);
+      pushBits(payloadBytes.length, 8);
+      for (const b of payloadBytes) {
+        pushBits(b, 8);
+      }
+
+      const totalDataBits = spec.dataBytes * 8;
+      pushBits(0, Math.min(4, Math.max(0, totalDataBits - bits.length)));
+      while (bits.length % 8 !== 0) bits.push(0);
+
+      const pad = [0xec, 0x11];
+      let p = 0;
+      while (bits.length < totalDataBits) {
+        pushBits(pad[p % 2], 8);
+        p++;
+      }
+
+      const dataCodewords = [];
+      for (let i = 0; i < totalDataBits; i += 8) {
+        let cw = 0;
+        for (let j = 0; j < 8; j++) {
+          cw = (cw << 1) | bits[i + j];
+        }
+        dataCodewords.push(cw);
+      }
+
+      const eccCodewords = calcularEcc(dataCodewords, spec.eccBytes);
+      const allCodewords = dataCodewords.concat(eccCodewords);
+
+      const size = spec.size;
+      const grid = Array.from({ length: size }, () => new Array(size).fill(null));
+      const reserved = Array.from({ length: size }, () => new Array(size).fill(false));
+
+      function placeFinder(r0, c0) {
+        for (let r = -1; r <= 7; r++) {
+          for (let c = -1; c <= 7; c++) {
+            const rr = r0 + r;
+            const cc = c0 + c;
+            if (rr < 0 || rr >= size || cc < 0 || cc >= size) continue;
+            const inBox = r >= 0 && r <= 6 && c >= 0 && c <= 6;
+            const onBorder = r === 0 || r === 6 || c === 0 || c === 6;
+            const inCenter = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+            grid[rr][cc] = inBox ? (onBorder || inCenter ? 1 : 0) : 0;
+            reserved[rr][cc] = true;
+          }
+        }
+      }
+
+      placeFinder(0, 0);
+      placeFinder(0, size - 7);
+      placeFinder(size - 7, 0);
+
+      for (const center of spec.align) {
+        for (let r = -2; r <= 2; r++) {
+          for (let c = -2; c <= 2; c++) {
+            const rr = center + r;
+            const cc = center + c;
+            if (reserved[rr][cc]) continue;
+            const dist = Math.max(Math.abs(r), Math.abs(c));
+            grid[rr][cc] = dist === 0 || dist === 2 ? 1 : 0;
+            reserved[rr][cc] = true;
+          }
+        }
+      }
+
+      for (let i = 8; i < size - 8; i++) {
+        const val = i % 2 === 0 ? 1 : 0;
+        if (!reserved[6][i]) {
+          grid[6][i] = val;
+          reserved[6][i] = true;
+        }
+        if (!reserved[i][6]) {
+          grid[i][6] = val;
+          reserved[i][6] = true;
+        }
+      }
+
+      grid[size - 8][8] = 1;
+      reserved[size - 8][8] = true;
+
+      for (let i = 0; i < 9; i++) {
+        reserved[8][i] = true;
+        reserved[i][8] = true;
+      }
+      for (let i = 0; i < 8; i++) {
+        reserved[8][size - 1 - i] = true;
+        reserved[size - 1 - i][8] = true;
+      }
+
+      const bitStream = [];
+      for (const cw of allCodewords) {
+        for (let j = 7; j >= 0; j--) {
+          bitStream.push((cw >>> j) & 1);
+        }
+      }
+
+      let ptr = 0;
+      let goingUp = true;
+      for (let col = size - 1; col >= 1; col -= 2) {
+        if (col === 6) col = 5;
+        for (let step = 0; step < size; step++) {
+          const row = goingUp ? size - 1 - step : step;
+          for (const c of [col, col - 1]) {
+            if (!reserved[row][c]) {
+              const b = ptr < bitStream.length ? bitStream[ptr++] : 0;
+              grid[row][c] = ((row + c) % 2 === 0) ? (b ^ 1) : b;
+            }
+          }
+        }
+        goingUp = !goingUp;
+      }
+
+      const formatBits = [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0];
+      const topLeft = [
+        [0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [5, 8], [7, 8], [8, 8],
+        [8, 7], [8, 5], [8, 4], [8, 3], [8, 2], [8, 1], [8, 0]
+      ];
+      for (let i = 0; i < 15; i++) {
+        const [r, c] = topLeft[i];
+        grid[r][c] = formatBits[i];
+      }
+      for (let i = 0; i < 8; i++) {
+        grid[size - 1 - i][8] = formatBits[i];
+      }
+      for (let i = 0; i < 7; i++) {
+        grid[8][size - 7 + i] = formatBits[8 + i];
+      }
+
+      return grid;
+    }
+
+    function desenharQrNoCanvas(canvas, texto) {
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!texto) return;
+
+      try {
+        const grid = construirMatrizQr(texto);
+        const quiet = 2;
+        const total = grid.length + quiet * 2;
+        const cell = Math.max(2, Math.floor(canvas.width / total));
+        const used = cell * total;
+        const ox = Math.floor((canvas.width - used) / 2);
+        const oy = Math.floor((canvas.height - used) / 2);
+
+        for (let r = 0; r < grid.length; r++) {
+          for (let c = 0; c < grid.length; c++) {
+            if (grid[r][c] === 1) {
+              ctx.fillStyle = "#000000";
+              ctx.fillRect(ox + (c + quiet) * cell, oy + (r + quiet) * cell, cell, cell);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao desenhar matriz QR:", err);
+      }
+    }
+
+    function lerConteudoQrNoEcra() {
+      const alvo = document.getElementById("qrDadosDecodificados");
+      if (!alvo) return;
+
+      let texto = ultimoPayloadQrTexto;
+      if (!texto) {
+        try {
+          const salvo = localStorage.getItem("alphatv_last_qr_user");
+          if (salvo) texto = salvo;
+        } catch (e) {}
+      }
+
+      if (!texto) {
+        alvo.innerHTML = "<div style='color:#94a3b8;'>Sem dados de QR Code registados nesta sessão.</div>";
+        alvo.style.display = "block";
+        return;
+      }
+
+      try {
+        const obj = JSON.parse(texto);
+        alvo.innerHTML =
+          "<div style='padding:10px;border:1px solid #0284c7;border-radius:6px;background:#082f49;color:#e0f2fe;'>" +
+          "<div><strong>Nome:</strong> " + (obj.nome || "-") + "</div>" +
+          "<div><strong>E-mail:</strong> " + (obj.email || "-") + "</div>" +
+          "<div><strong>País / Telefone:</strong> " + (obj.pais || "PT") + (obj.telefone ? " • " + obj.telefone : "") + "</div>" +
+          "<div><strong>Perfil:</strong> " + (obj.role || "Utilizador") + "</div>" +
+          "<div><strong>Subscrição:</strong> " + (obj.statusSubscricao || "trial") + (obj.pagoAte ? " (até " + obj.pagoAte + ")" : "") + "</div>" +
+          (obj.codigoPromocional ? "<div><strong>Código Promocional:</strong> " + obj.codigoPromocional + "</div>" : "") +
+          "</div>";
+        alvo.style.display = "block";
+      } catch (e) {
+        alvo.textContent = texto;
+        alvo.style.display = "block";
+      }
+    }
+
+    function renderizarDadosQr(dados) {
+      const boxAtivo = document.getElementById("qrConteudoAtivo");
+      const msgSemDados = document.getElementById("qrSemDadosMsg");
+      const qrCanvas = document.getElementById("qrCanvas");
+      if (!boxAtivo || !qrCanvas || !dados || !dados.email) return;
+
+      const resumo = {
+        nome: dados.nome || "",
+        email: dados.email || "",
+        pais: dados.pais || "PT",
+        telefone: dados.telefone || "",
+        role: dados.role || "Utilizador",
+        statusSubscricao: dados.statusSubscricao || "trial",
+        pagoAte: dados.pagoAte || null,
+        codigoPromocional: dados.codigoPromocional || null,
+      };
+      ultimoPayloadQrTexto = JSON.stringify(resumo);
+
+      if (msgSemDados) msgSemDados.style.display = "none";
+      boxAtivo.style.display = "flex";
+      desenharQrNoCanvas(qrCanvas, ultimoPayloadQrTexto);
+
+      const loginEmailInput = document.getElementById("loginEmail");
+      if (loginEmailInput && !loginEmailInput.value) {
+        loginEmailInput.value = resumo.email;
       }
     }
 
     configurarCampoTelefone("cad");
-    const payloadEl = document.getElementById("qrPayloadTexto");
-    const qrCanvas = document.getElementById("qrCanvas");
-    if (payloadEl && qrCanvas) {
-      desenharQrSimbolico(qrCanvas, payloadEl.textContent);
+
+    const dadosServidorQr = <%- JSON.stringify(qrObj || null) %>;
+    if (dadosServidorQr && dadosServidorQr.email) {
+      try {
+        localStorage.setItem("alphatv_last_qr_user", JSON.stringify(dadosServidorQr));
+      } catch (e) {}
+      renderizarDadosQr(dadosServidorQr);
+    } else {
+      try {
+        const salvo = localStorage.getItem("alphatv_last_qr_user");
+        if (salvo) {
+          const parsed = JSON.parse(salvo);
+          if (parsed && parsed.email) {
+            renderizarDadosQr(parsed);
+          }
+        }
+      } catch (e) {}
     }
   </script>
 </body>
