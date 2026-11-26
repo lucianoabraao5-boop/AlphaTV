@@ -139,16 +139,19 @@ async function enviarMensagemRecuperacao({ telefoneE164, pais, codigo, nome }) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromNumber = process.env.TWILIO_FROM_NUMBER;
 
-  const corpoMensagem = `AlphaTV (${pais}): Olá ${nome}, o teu código de recuperação é ${codigo} (válido por 15 minutos).`;
+  const corpoMensagem = `AlphaTV (${pais}): Ola ${nome}, o teu codigo de recuperacao e ${codigo} (valido por 15 minutos).`;
 
   if (accountSid && authToken && fromNumber) {
     try {
       const client = twilio(accountSid, authToken);
-      await client.messages.create({
+      const resposta = await client.messages.create({
         body: corpoMensagem,
         from: fromNumber,
         to: telefoneE164,
       });
+      console.log(
+        `[SMS TWILIO ENVIADO] SID: ${resposta.sid} | Destino: ${telefoneE164}`,
+      );
       return { enviadoExterno: true };
     } catch (erro) {
       console.error("Erro ao enviar SMS via Twilio:", erro);
@@ -157,7 +160,7 @@ async function enviarMensagemRecuperacao({ telefoneE164, pais, codigo, nome }) {
   }
 
   console.log(
-    `[RECUPERAÇÃO ${pais}] Destino: ${telefoneE164} | Código: ${codigo}`,
+    `[RECUPERACAO ${pais}] Destino: ${telefoneE164} | Codigo: ${codigo}`,
   );
   return { enviadoExterno: false };
 }
