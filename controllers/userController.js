@@ -1,3 +1,4 @@
+const os = require("os");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const User = require("../models/User");
@@ -14,6 +15,34 @@ const {
 
 function isAdminRole(role) {
   return String(role || "").toLowerCase() === "administrador";
+}
+
+function obterIpLocalRede() {
+  const interfaces = os.networkInterfaces();
+  for (const nome of Object.keys(interfaces)) {
+    for (const net of interfaces[nome] || []) {
+      if (net && net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return null;
+}
+
+function construirBaseUrlAcessivel(req) {
+  const protocolo = req.get("x-forwarded-proto") || req.protocol || "http";
+  const hostAtual = String(req.get("host") || "localhost:3000").trim();
+
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(hostAtual)) {
+    const ipLocal = obterIpLocalRede();
+    if (ipLocal) {
+      const portaMatch = hostAtual.match(/:(\d+)$/);
+      const porta = portaMatch ? portaMatch[1] : "3000";
+      return `${protocolo}://${ipLocal}:${porta}`;
+    }
+  }
+
+  return `${protocolo}://${hostAtual}`;
 }
 
 function lerQrCookie(req) {
@@ -179,7 +208,6 @@ async function logout(req, res) {
     const sessUser =
       req.session && req.session.utilizador ? req.session.utilizador : null;
     let dadosQr = null;
-    let qrUrlRecuperacao = null;
 
     if (sessUser && sessUser.id) {
       const userDoc = await User.findById(sessUser.id);
@@ -194,8 +222,8 @@ async function logout(req, res) {
         userDoc.resetTokenExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
         await userDoc.save();
 
-        const baseUrl = `${req.protocol}://${req.get("host")}`;
-        qrUrlRecuperacao = `${baseUrl}/recuperar-senha?token=${tokenBruto}&email=${encodeURIComponent(userDoc.email)}`;
+        const baseUrl = construirBaseUrlAcessivel(req);
+        const qrUrlRecuperacao = `${baseUrl}/recuperar-senha?token=${encodeURIComponent(tokenBruto)}&email=${encodeURIComponent(userDoc.email)}`;
 
         dadosQr = {
           id: String(userDoc._id),
@@ -212,6 +240,8 @@ async function logout(req, res) {
             userDoc.codigoPromocionalLiberado && userDoc.codigoPromocional
               ? userDoc.codigoPromocional
               : null,
+          token: tokenBruto,
+          expiraEm: "30 minutos",
           qrUrl: qrUrlRecuperacao,
           logoutEm: new Date().toISOString(),
         };
@@ -309,9 +339,9 @@ async function salvarNovaSenha(req, res) {
       });
     }
 
-    if (novaSenha.length < 4) {
+    if (novaSenha.length < 6) {
       return res.status(400).render("nova-senha", {
-        erro: "A nova senha deve ter pelo menos 4 caracteres.",
+        erro: "A nova senha deve ter pelo menos 6 caracteres.",
         sucesso: null,
         token,
         email,
@@ -368,7 +398,10 @@ async function salvarNovaSenha(req, res) {
 
 async function mostrarSubscricao(req, res) {
   try {
-    const user = await User.findById(req.session.utilizador.id);
+    const sessId = req.session?.utilizador?.id;
+    if (!sessId) return res.redirect("/");
+
+    const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
 
     const comprasPendentes = await Compra.find({
@@ -392,6 +425,9 @@ async function mostrarSubscricao(req, res) {
 
 async function iniciarPagamento(req, res) {
   try {
+    const sessId = req.session?.utilizador?.id;
+    if (!sessId) return res.redirect("/");
+
     const { planoDias, metodoPagamento, codigoPromocional } = req.body;
     const plano = obterPlano(planoDias);
     if (!plano) return res.redirect("/subscricao");
@@ -401,7 +437,7 @@ async function iniciarPagamento(req, res) {
     );
     const nomeMetodo = metodoValido ? metodoValido.nome : "Pagamento";
 
-    const user = await User.findById(req.session.utilizador.id);
+    const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
 
     let desconto = 0;
@@ -453,15 +489,18 @@ async function iniciarPagamento(req, res) {
 
 async function confirmarPagamento(req, res) {
   try {
+    const sessId = req.session?.utilizador?.id;
+    if (!sessId) return res.redirect("/");
+
     const { codigoRecibo } = req.params;
     const compra = await Compra.findOne({
       codigoRecibo,
-      utilizadorId: req.session.utilizador.id,
+      utilizadorId: sessId,
     });
     if (!compra)
       return res.status(404).send("Pedido de pagamento não encontrado.");
 
-    const user = await User.findById(req.session.utilizador.id);
+    const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
 
     if (compra.status !== "confirmado") {
@@ -510,8 +549,11 @@ async function confirmarPagamento(req, res) {
 
 async function verRecibo(req, res) {
   try {
+    const sessId = req.session?.utilizador?.id;
+    if (!sessId) return res.redirect("/");
+
     const { codigoRecibo } = req.params;
-    const user = await User.findById(req.session.utilizador.id);
+    const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
 
     const compra =
@@ -533,7 +575,10 @@ async function verRecibo(req, res) {
 
 async function gerarCodigoConviteUtilizador(req, res) {
   try {
-    const user = await User.findById(req.session.utilizador.id);
+    const sessId = req.session?.utilizador?.id;
+    if (!sessId) return res.redirect("/");
+
+    const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
 
     if (!user.codigoPromocionalLiberado) {

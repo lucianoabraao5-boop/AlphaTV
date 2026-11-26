@@ -2,10 +2,10 @@ require("dotenv").config();
 
 const express = require("express");
 const session = require("express-session");
+const cookieParser = require("cookie-parser");
 const conectarDB = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
 const videoRoutes = require("./routes/videoRoutes");
-const cookieParser = require("cookie-parser");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,12 +42,4 @@ app.use("/", videoRoutes);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor a correr na porta ${PORT}`);
-});
-const path = require("path");
-
-app.get("/js/qrcode.min.js", (req, res) => {
-  res.type("application/javascript");
-  res.sendFile(
-    path.join(__dirname, "node_modules", "qrcode", "build", "qrcode.min.js"),
-  );
 });
