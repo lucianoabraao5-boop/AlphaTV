@@ -381,7 +381,7 @@
       </p>
     </div>
   </div>
-
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script>
     let ultimoPayloadQrTexto = "";
 
@@ -631,28 +631,30 @@
 
       if (!texto) return;
 
-      try {
-        const grid = construirMatrizQr(texto);
-        const quiet = 2;
-        const total = grid.length + quiet * 2;
-        const cell = Math.max(2, Math.floor(canvas.width / total));
-        const used = cell * total;
-        const ox = Math.floor((canvas.width - used) / 2);
-        const oy = Math.floor((canvas.height - used) / 2);
-
-        for (let r = 0; r < grid.length; r++) {
-          for (let c = 0; c < grid.length; c++) {
-            if (grid[r][c] === 1) {
-              ctx.fillStyle = "#000000";
-              ctx.fillRect(ox + (c + quiet) * cell, oy + (r + quiet) * cell, cell, cell);
+      if (window.QRCode && typeof window.QRCode.toCanvas === "function") {
+        window.QRCode.toCanvas(
+          canvas,
+          String(texto),
+          {
+            width: canvas.width,
+            margin: 2,
+            errorCorrectionLevel: "M",
+            color: {
+              dark: "#000000",
+              light: "#ffffff",
+            },
+          },
+          function (err) {
+            if (err) {
+              console.error("Erro ao gerar QR Code real:", err);
             }
           }
-        }
-      } catch (err) {
-        console.error("Erro ao desenhar matriz QR:", err);
+        );
+      } else {
+        console.error("Biblioteca QRCode não carregada.");
       }
     }
-
+    
     function renderizarDadosQr(dados) {
       const boxAtivo = document.getElementById("qrConteudoAtivo");
       const msgSemDados = document.getElementById("qrSemDadosMsg");
