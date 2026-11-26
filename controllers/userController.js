@@ -220,8 +220,12 @@ async function solicitarRecuperacaoTelefone(req, res) {
       nome: user.nome,
     });
 
+    const mensagemSucesso = envio.enviadoExterno
+      ? `Código enviado por SMS para ${telCheck.telefoneE164} (${telCheck.pais}).`
+      : `Código gerado para ${telCheck.telefoneE164} (${telCheck.pais}) (SMS externo não entregue — em conta Trial da Twilio, verifique o número de destino na consola).`;
+
     return renderIndex(req, res, 200, {
-      sucesso: `Código enviado por mensagem de telefone para ${telCheck.telefoneE164} (${telCheck.pais}).`,
+      sucesso: mensagemSucesso,
       codigoDemo: envio.enviadoExterno ? null : codigo,
       passoRecuperacao: "confirmar",
       dadosRecuperacao: {

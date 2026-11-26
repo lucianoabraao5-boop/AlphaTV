@@ -150,19 +150,31 @@ async function enviarMensagemRecuperacao({ telefoneE164, pais, codigo, nome }) {
         to: telefoneE164,
       });
       console.log(
-        `[SMS TWILIO ENVIADO] SID: ${resposta.sid} | Destino: ${telefoneE164}`,
+        `[SMS TWILIO ENVIADO] SID: ${resposta.sid} | Para: ${telefoneE164}`,
       );
-      return { enviadoExterno: true };
+      return { enviadoExterno: true, erroDetalhe: null };
     } catch (erro) {
-      console.error("Erro ao enviar SMS via Twilio:", erro);
-      return { enviadoExterno: false };
+      console.error("[ERRO SMS TWILIO]", {
+        codigo: erro.code,
+        status: erro.status,
+        message: erro.message,
+        para: telefoneE164,
+        de: fromNumber,
+      });
+      return {
+        enviadoExterno: false,
+        erroDetalhe: erro.message || "Falha no envio SMS pela Twilio",
+      };
     }
   }
 
   console.log(
     `[RECUPERACAO ${pais}] Destino: ${telefoneE164} | Codigo: ${codigo}`,
   );
-  return { enviadoExterno: false };
+  return {
+    enviadoExterno: false,
+    erroDetalhe: "Credenciais Twilio nao configuradas",
+  };
 }
 
 module.exports = {
