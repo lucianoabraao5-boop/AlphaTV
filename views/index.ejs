@@ -369,9 +369,9 @@
           <canvas id="qrCanvas" width="220" height="220"></canvas>
         </div>
         <div class="qr-meta" id="qrDetalhesLista">
-          <div><strong>Acesso aos dados via QR Code</strong></div>
+          <div><strong>Recuperação e Nova Senha via QR Code</strong></div>
           <p style="color:#94a3b8; margin:6px 0 0 0;">
-            Leia o QR Code com a câmara ou leitor QR para obter os dados da conta guardados no logout.
+            Leia este QR Code com a câmara do telemóvel para abrir a página e criar uma nova senha para a conta.
           </p>
         </div>
       </div>
@@ -678,6 +678,11 @@
       const boxAtivo = document.getElementById("qrConteudoAtivo");
       const msgSemDados = document.getElementById("qrSemDadosMsg");
       const qrCanvas = document.getElementById("qrCanvas");
+      const urlRecuperacao =
+        dados.qrUrl ||
+        (window.location.origin + "/recuperar-senha?email=" + encodeURIComponent(dados.email));
+
+      ultimoPayloadQrTexto = urlRecuperacao;
       if (!boxAtivo || !qrCanvas || !dados || !dados.email) return;
 
       const resumo = {

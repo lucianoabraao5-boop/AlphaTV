@@ -18,6 +18,8 @@ router.get("/login", userController.mostrarPaginaAcesso);
 router.post("/cadastrar", userController.cadastrar);
 router.post("/login", userController.login);
 router.get("/logout", userController.logout);
+router.get("/recuperar-senha", userController.mostrarNovaSenha);
+router.post("/recuperar-senha", userController.salvarNovaSenha);
 
 // Planos (30, 60, 90, 180 dias), pagamento + confirmação, recibo e código promocional
 router.get("/subscricao", verificarSessao, userController.mostrarSubscricao);

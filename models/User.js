@@ -41,6 +41,8 @@ const userSchema = new mongoose.Schema(
     telefone: { type: String, default: "" },
     codigoRecuperacao: { type: String, default: null },
     codigoRecuperacaoExpira: { type: Date, default: null },
+    resetTokenHash: { type: String, default: null },
+    resetTokenExpiresAt: { type: Date, default: null },
 
     // Período gratuito de 7 dias e subscrição confirmada
     trialEndsAt: {
