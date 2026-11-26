@@ -3,11 +3,39 @@ const router = express.Router();
 const User = require("../models/User");
 const Compra = require("../models/Compra");
 const userController = require("../controllers/userController");
-const { gerarCodigoPromocional } = require("../services/alphaService");
+const {
+  gerarCodigoPromocional,
+  normalizarTelefonePorPais,
+} = require("../services/alphaService");
 const {
   verificarSessao,
   verificarAdmin,
 } = require("../authMiddlewares/authMiddleware");
+
+// Garante que a conta 'adm' (ou Administrador) esteja sempre liberada com código promocional
+async function garantirPromocionalAdmin(userDoc) {
+  if (!userDoc) return null;
+  const eAdminOuAdm =
+    String(userDoc.role || "").toLowerCase() === "administrador" ||
+    String(userDoc.email || "").toLowerCase() === "adm@adm.pt" ||
+    String(userDoc.nome || "").toLowerCase() === "adm";
+
+  if (eAdminOuAdm) {
+    let alterado = false;
+    if (!userDoc.codigoPromocionalLiberado) {
+      userDoc.codigoPromocionalLiberado = true;
+      alterado = true;
+    }
+    if (!userDoc.codigoPromocional) {
+      userDoc.codigoPromocional = "ALPHATV-ADM-0001";
+      alterado = true;
+    }
+    if (alterado) {
+      await userDoc.save();
+    }
+  }
+  return userDoc;
+}
 
 // Acesso e recuperação por telefone segundo país (PT / BR / OUTROS)
 router.get("/", userController.mostrarPaginaAcesso);
@@ -47,7 +75,12 @@ router.post(
 // Rota administrativa
 router.get("/admin", verificarAdmin, async (req, res) => {
   try {
-    const utilizadores = await User.find().sort({ _id: -1 });
+    const utilizadoresBrutos = await User.find().sort({ _id: -1 });
+    const utilizadores = [];
+    for (const u of utilizadoresBrutos) {
+      utilizadores.push(await garantirPromocionalAdmin(u));
+    }
+
     const compras = await Compra.find().sort({ criadoEm: -1 }).limit(30);
     res.render("admin", {
       utilizadores,
@@ -59,6 +92,45 @@ router.get("/admin", verificarAdmin, async (req, res) => {
     res.status(500).send("Erro ao carregar o painel de administração.");
   }
 });
+
+// Atualizar País e Telefone de um utilizador no Admin
+router.post(
+  "/admin/utilizadores/:id/contacto",
+  verificarAdmin,
+  async (req, res) => {
+    try {
+      const alvo = await User.findById(req.params.id);
+      if (!alvo) return res.redirect("/admin");
+
+      const { pais, telefone } = req.body;
+      const paisEscolhido = ["PT", "BR", "OUTROS"].includes(
+        String(pais).toUpperCase(),
+      )
+        ? String(pais).toUpperCase()
+        : "PT";
+
+      if (telefone && String(telefone).trim() !== "") {
+        const check = normalizarTelefonePorPais(paisEscolhido, telefone);
+        if (check.valido) {
+          alvo.pais = check.pais;
+          alvo.telefone = check.telefoneE164;
+        } else {
+          alvo.pais = paisEscolhido;
+          alvo.telefone = String(telefone).trim();
+        }
+      } else {
+        alvo.pais = paisEscolhido;
+        alvo.telefone = "";
+      }
+
+      await alvo.save();
+      return res.redirect("/admin");
+    } catch (erro) {
+      console.error("Erro ao atualizar contacto:", erro);
+      return res.redirect("/admin");
+    }
+  },
+);
 
 // Administrador confirma pagamento pendente e libera acesso imediatamente
 router.post(
@@ -117,7 +189,7 @@ router.post(
   },
 );
 
-// Administrador libera ou bloqueia permissão de código promocional de convite
+// Administrador libera ou bloqueia permissão de código promocional (conta 'adm' nunca é bloqueada)
 router.post(
   "/admin/utilizadores/:id/promocional",
   verificarAdmin,
@@ -125,10 +197,22 @@ router.post(
     try {
       const alvo = await User.findById(req.params.id);
       if (alvo) {
-        const liberar = !alvo.codigoPromocionalLiberado;
-        alvo.codigoPromocionalLiberado = liberar;
-        if (liberar && !alvo.codigoPromocional) {
-          alvo.codigoPromocional = gerarCodigoPromocional(alvo.nome);
+        const eAdmFixo =
+          String(alvo.role || "").toLowerCase() === "administrador" ||
+          String(alvo.email || "").toLowerCase() === "adm@adm.pt" ||
+          String(alvo.nome || "").toLowerCase() === "adm";
+
+        if (eAdmFixo) {
+          alvo.codigoPromocionalLiberado = true;
+          if (!alvo.codigoPromocional) {
+            alvo.codigoPromocional = "ALPHATV-ADM-0001";
+          }
+        } else {
+          const liberar = !alvo.codigoPromocionalLiberado;
+          alvo.codigoPromocionalLiberado = liberar;
+          if (liberar && !alvo.codigoPromocional) {
+            alvo.codigoPromocional = gerarCodigoPromocional(alvo.nome);
+          }
         }
         await alvo.save();
       }

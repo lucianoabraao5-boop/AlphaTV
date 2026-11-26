@@ -13,13 +13,15 @@
     .btn-sair { background: #7f1d1d; }
     .btn-secundario { background: #1e293b; border: 1px solid #334155; }
     .input-dias { width: 58px; padding: 6px 8px; border-radius: 6px; border: 1px solid #334155; background: #020617; color: #fff; }
-    main { max-width: 1240px; margin: 24px auto; padding: 0 20px; display: grid; gap: 20px; }
+    .input-tel, .select-pais { padding: 6px 8px; border-radius: 6px; border: 1px solid #334155; background: #020617; color: #fff; font-size: 0.82rem; }
+    .input-tel { width: 135px; }
+    main { max-width: 1280px; margin: 24px auto; padding: 0 20px; display: grid; gap: 20px; }
     .card { background: #0b1324; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #1e293b; font-size: 0.86rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #1e293b; font-size: 0.86rem; vertical-align: middle; }
     th { color: #94a3b8; }
     .acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-    .acoes form { margin: 0; display: flex; gap: 6px; align-items: center; }
+    .acoes form, .form-contacto { margin: 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -80,13 +82,14 @@
     </div>
 
     <div class="card">
-      <h2 style="margin-top:0; color:#38bdf8;">Utilizadores, Dias Gratuitos e Código Promocional</h2>
+      <h2 style="margin-top:0; color:#38bdf8;">Utilizadores, País/Telefone, Dias Gratuitos e Código Promocional</h2>
       <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
               <th>Nome</th>
-              <th>E-mail / País / Tel</th>
+              <th>E-mail</th>
+              <th>País / Telefone</th>
               <th>Perfil</th>
               <th>Acesso / Dias</th>
               <th>Código Convite</th>
@@ -97,18 +100,44 @@
             <% listaUsers.forEach(function(u) { %>
               <%
                 const isAdminRow = String(u.role || "").toLowerCase() === "administrador";
+                const eAdmConta = isAdminRow || String(u.email || "").toLowerCase() === "adm@adm.pt" || String(u.nome || "").toLowerCase() === "adm";
                 const agora = new Date();
                 const pagoAtivo = u.statusSubscricao === "ativo" && u.pagoAte && new Date(u.pagoAte) > agora;
                 const trialDate = u.trialEndsAt ? new Date(u.trialEndsAt) : null;
                 const diasRestantes = trialDate ? Math.max(0, Math.ceil((trialDate - agora) / (24 * 60 * 60 * 1000))) : 0;
+                const paisAtual = u.pais || "PT";
+                const nomePais = paisAtual === "BR" ? "Brasil" : (paisAtual === "OUTROS" ? "Outros" : "Portugal");
               %>
               <tr>
                 <td><strong><%= u.nome %></strong></td>
-                <td><%= u.email %><br><span style="color:#94a3b8;"><%= u.pais || "PT" %> <%= u.telefone || "" %></span></td>
+                <td><%= u.email %></td>
+                <td>
+                  <div style="margin-bottom:4px;">
+                    <strong><%= nomePais %> (<%= paisAtual %>)</strong> —
+                    <span style="color:<%= u.telefone ? '#38bdf8' : '#94a3b8' %>;">
+                      <%= u.telefone ? u.telefone : "Sem telefone" %>
+                    </span>
+                  </div>
+                  <form action="/admin/utilizadores/<%= u._id %>/contacto" method="POST" class="form-contacto">
+                    <select name="pais" class="select-pais">
+                      <option value="PT" <%= paisAtual === "PT" ? "selected" : "" %>>Portugal (+351)</option>
+                      <option value="BR" <%= paisAtual === "BR" ? "selected" : "" %>>Brasil (+55)</option>
+                      <option value="OUTROS" <%= paisAtual === "OUTROS" ? "selected" : "" %>>Outros</option>
+                    </select>
+                    <input
+                      type="text"
+                      name="telefone"
+                      value="<%= u.telefone || '' %>"
+                      placeholder="Telefone"
+                      class="input-tel"
+                    />
+                    <button type="submit" class="btn btn-secundario">Salvar</button>
+                  </form>
+                </td>
                 <td><%= isAdminRow ? "Administrador" : "Utilizador" %></td>
                 <td>
-                  <% if (isAdminRow) { %>
-                    Acesso Admin
+                  <% if (eAdmConta) { %>
+                    <strong style="color:#38bdf8;">Acesso Admin (Sempre Liberado)</strong>
                   <% } else if (pagoAtivo) { %>
                     Ativo até <%= new Date(u.pagoAte).toLocaleDateString("pt-PT") %>
                   <% } else if (trialDate && trialDate > agora) { %>
@@ -118,7 +147,10 @@
                   <% } %>
                 </td>
                 <td>
-                  <% if (u.codigoPromocionalLiberado) { %>
+                  <% if (eAdmConta) { %>
+                    <strong style="color:#38bdf8;"><%= u.codigoPromocional || "ALPHATV-ADM-0001" %></strong><br>
+                    <span style="color:#38bdf8; font-size:0.78rem;">Sempre Liberado</span>
+                  <% } else if (u.codigoPromocionalLiberado) { %>
                     <strong style="color:#38bdf8;"><%= u.codigoPromocional || "Liberado (aguarda geração)" %></strong>
                   <% } else { %>
                     <span style="color:#94a3b8;">Bloqueado</span>
@@ -126,7 +158,7 @@
                 </td>
                 <td>
                   <div class="acoes">
-                    <% if (!isAdminRow) { %>
+                    <% if (!eAdmConta) { %>
                       <form action="/admin/utilizadores/<%= u._id %>/renovar-teste" method="POST">
                         <input type="number" name="dias" value="7" min="1" max="365" class="input-dias" />
                         <button type="submit" class="btn">Renovar Dias</button>

@@ -18,7 +18,7 @@ function isAdminRole(role) {
 }
 
 function mostrarPaginaAcesso(req, res) {
-  res.render("acesso", {
+  return res.render("index", {
     erro: null,
     sucesso: null,
     codigoDemo: null,
