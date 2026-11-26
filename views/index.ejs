@@ -199,6 +199,22 @@
 
     .btn:hover { background: #0ea5e9; }
 
+    .btn-secundario {
+      margin-top: 10px;
+      background: #0f172a;
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-secundario:hover {
+      background: #082f49;
+    }
+
     .barra-recuperar {
       margin-top: 14px;
       display: flex;
@@ -370,10 +386,13 @@
           <canvas id="qrCanvas" width="220" height="220"></canvas>
         </div>
         <div class="qr-meta" id="qrDetalhesLista">
-          <div><strong>Redefinir Senha via QR Code</strong></div>
+          <div><strong>A aguardar leitura do QR Code</strong></div>
           <p style="color:#94a3b8; margin:6px 0 0 0;">
-            Leia este QR Code com a câmara do telemóvel para abrir a página e criar uma nova senha para a conta.
+            Leia este QR Code com a câmara do telemóvel ou clique em <strong>Ler QR Code</strong> para extrair o link de redefinição de senha.
           </p>
+          <button type="button" class="btn-secundario" onclick="lerQrCodeAtual()">
+            Ler QR Code
+          </button>
         </div>
       </div>
 
@@ -385,6 +404,7 @@
 
   <script>
     let ultimoPayloadQrTexto = "";
+    let ultimoDadosQr = null;
 
     function escaparHtml(valor) {
       return String(valor || "")
@@ -427,7 +447,73 @@
       }
     }
 
-    function desenharQrNoCanvas(canvas, texto) {
+    function extrairDadosDaLeituraQr(textoLido, dadosOriginais) {
+      const textoLimpo = String(textoLido || "").trim();
+      let emailLido = (dadosOriginais && dadosOriginais.email) || "";
+      let tokenLido = (dadosOriginais && dadosOriginais.token) || "";
+
+      try {
+        const parsedUrl = new URL(textoLimpo);
+        const qEmail = parsedUrl.searchParams.get("email");
+        const qToken = parsedUrl.searchParams.get("token");
+        if (qEmail) emailLido = qEmail;
+        if (qToken) tokenLido = qToken;
+      } catch (e) {}
+
+      return {
+        url: textoLimpo,
+        email: emailLido,
+        token: tokenLido,
+        expiraEm: (dadosOriginais && dadosOriginais.expiraEm) || "30 minutos",
+      };
+    }
+
+    function atualizarDetalhesAposLeitura(leitura) {
+      const detalhesEl = document.getElementById("qrDetalhesLista");
+      if (!detalhesEl) return;
+
+      if (!leitura || !leitura.url) {
+        detalhesEl.innerHTML =
+          "<div><strong>QR Code sem conteúdo válido</strong></div>" +
+          "<p style=\"color:#94a3b8; margin:6px 0 0 0;\">Faça logout numa conta para gerar um QR Code de redefinição de senha.</p>" +
+          "<button type=\"button\" class=\"btn-secundario\" onclick=\"lerQrCodeAtual()\">Ler QR Code</button>";
+        return;
+      }
+
+      const emailEscapado = escaparHtml(leitura.email || "Conta");
+      const expiraEscapado = escaparHtml(leitura.expiraEm || "30 minutos");
+      const urlEscapado = escaparHtml(leitura.url);
+
+      detalhesEl.innerHTML =
+        "<div><strong>Leitura do QR Code • Redefinir Senha</strong></div>" +
+        "<div style=\"margin-top:6px;\"><strong>Conta lida:</strong> " + emailEscapado + "</div>" +
+        "<div><strong>Validade do link:</strong> " + expiraEscapado + "</div>" +
+        "<p style=\"color:#94a3b8; margin:8px 0 0 0;\">" +
+        "Conteúdo obtido a partir do QR Code. Abra o link abaixo no telemóvel ou navegador para definir a nova senha." +
+        "</p>" +
+        "<div style=\"margin-top:8px;\">" +
+        "<a href=\"" + urlEscapado + "\" style=\"color:#38bdf8; word-break:break-all; font-size:0.82rem;\">" +
+        urlEscapado +
+        "</a>" +
+        "</div>" +
+        "<button type=\"button\" class=\"btn-secundario\" onclick=\"lerQrCodeAtual()\">Ler QR Code novamente</button>";
+    }
+
+    function lerQrCodeAtual() {
+      const qrCanvas = document.getElementById("qrCanvas");
+      if (!qrCanvas || !ultimoPayloadQrTexto) {
+        atualizarDetalhesAposLeitura(null);
+        return;
+      }
+
+      // Garante que o canvas está desenhado antes da leitura
+      desenharQrNoCanvas(qrCanvas, ultimoPayloadQrTexto, function () {
+        const leitura = extrairDadosDaLeituraQr(ultimoPayloadQrTexto, ultimoDadosQr);
+        atualizarDetalhesAposLeitura(leitura);
+      });
+    }
+
+    function desenharQrNoCanvas(canvas, texto, aoConcluir) {
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -454,6 +540,10 @@
             function (err) {
               if (err) {
                 console.error("Erro ao gerar QR Code:", err);
+                return;
+              }
+              if (typeof aoConcluir === "function") {
+                aoConcluir();
               }
             }
           );
@@ -471,8 +561,9 @@
       const boxAtivo = document.getElementById("qrConteudoAtivo");
       const msgSemDados = document.getElementById("qrSemDadosMsg");
       const qrCanvas = document.getElementById("qrCanvas");
-      const detalhesEl = document.getElementById("qrDetalhesLista");
       if (!boxAtivo || !qrCanvas || !dados || !dados.email) return;
+
+      ultimoDadosQr = dados;
 
       const baseRecuperacao =
         window.location.origin +
@@ -483,29 +574,13 @@
       const urlRecuperacao = dados.qrUrl || baseRecuperacao;
       ultimoPayloadQrTexto = urlRecuperacao;
 
-      if (detalhesEl) {
-        const expiraTexto = dados.expiraEm || "30 minutos";
-        const emailEscapado = escaparHtml(dados.email);
-        const expiraEscapado = escaparHtml(expiraTexto);
-        const urlEscapado = escaparHtml(urlRecuperacao);
-
-        detalhesEl.innerHTML =
-          "<div><strong>Redefinir Senha via QR Code</strong></div>" +
-          "<div style=\"margin-top:6px;\"><strong>Conta:</strong> " + emailEscapado + "</div>" +
-          "<div><strong>Validade do link:</strong> " + expiraEscapado + "</div>" +
-          "<p style=\"color:#94a3b8; margin:8px 0 0 0;\">" +
-          "Leia este QR Code com a câmara do telemóvel para abrir a página e criar uma nova senha." +
-          "</p>" +
-          "<div style=\"margin-top:8px;\">" +
-          "<a href=\"" + urlEscapado + "\" style=\"color:#38bdf8; word-break:break-all; font-size:0.82rem;\">" +
-          urlEscapado +
-          "</a>" +
-          "</div>";
-      }
-
       if (msgSemDados) msgSemDados.style.display = "none";
       boxAtivo.style.display = "flex";
-      desenharQrNoCanvas(qrCanvas, ultimoPayloadQrTexto);
+
+      desenharQrNoCanvas(qrCanvas, ultimoPayloadQrTexto, function () {
+        const leitura = extrairDadosDaLeituraQr(ultimoPayloadQrTexto, ultimoDadosQr);
+        atualizarDetalhesAposLeitura(leitura);
+      });
 
       const loginEmailInput = document.getElementById("loginEmail");
       if (loginEmailInput && !loginEmailInput.value) {
