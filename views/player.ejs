@@ -5,164 +5,130 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AlphaTV | Área do Utilizador</title>
   <style>
-    body {
-      background-color: #070b14;
-      color: #e2e8f0;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: #0f172a;
-      border-bottom: 1px solid #1e293b;
-      padding: 14px 24px;
-    }
-    .marca {
-      color: #38bdf8;
-      font-size: 1.25rem;
-      font-weight: bold;
-    }
-    .topo-direita {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .badge-admin {
-      background: #082f49;
-      color: #38bdf8;
-      border: 1px solid #0284c7;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      font-weight: bold;
-    }
-    .badge-user {
-      background: #1e293b;
-      color: #cbd5e1;
-      border: 1px solid #475569;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-    }
-    .btn, a.btn {
-      background: #0284c7;
-      color: #ffffff;
-      text-decoration: none;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-size: 0.88rem;
-      cursor: pointer;
-    }
-    .btn:hover, a.btn:hover {
-      background: #0ea5e9;
-    }
-    .btn-sair {
-      background: #7f1d1d;
-    }
-    .btn-sair:hover {
-      background: #991b1b;
-    }
-    .banner-trial {
-      max-width: 1050px;
-      margin: 18px auto 0 auto;
-      padding: 12px 18px;
-      background: #082f49;
-      border: 1px solid #0284c7;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    main {
-      max-width: 1050px;
-      margin: 22px auto;
-      padding: 0 20px;
-    }
-    .card-player {
-      background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 22px;
-      box-shadow: 0 0 24px rgba(0, 180, 255, 0.12);
-    }
-    .card-player h2 {
-      margin: 0 0 16px 0;
-      color: #38bdf8;
-    }
-    video {
-      width: 100%;
-      max-height: 480px;
-      background: #000000;
-      border-radius: 8px;
-      border: 1px solid #1e293b;
-    }
-    .barra-admin-link {
-      display: flex;
-      gap: 10px;
-      margin-top: 16px;
-      flex-wrap: wrap;
-    }
-    .barra-admin-link input {
-      flex: 1;
-      min-width: 240px;
-      padding: 10px 12px;
-      border-radius: 6px;
-      border: 1px solid #334155;
-      background: #020617;
-      color: #f8fafc;
-    }
+    body { background: #070b14; color: #e2e8f0; font-family: Arial, sans-serif; margin: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: #0f172a; border-bottom: 1px solid #1e293b; padding: 14px 24px; }
+    .marca { color: #38bdf8; font-size: 1.25rem; font-weight: bold; }
+    .btn, a.btn { background: #0284c7; color: #fff; text-decoration: none; border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.88rem; cursor: pointer; font-weight: bold; }
+    .btn:hover, a.btn:hover { background: #0ea5e9; }
+    .btn-sair { background: #7f1d1d; }
+    main { max-width: 1100px; margin: 22px auto; padding: 0 20px; display: grid; gap: 20px; }
+    .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; }
+    .banner-trial { background: #082f49; border: 1px solid #0284c7; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    video { width: 100%; max-height: 460px; background: #000; border-radius: 8px; border: 1px solid #1e293b; }
+    .barra-admin-link { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .barra-admin-link input { flex: 1; min-width: 240px; padding: 10px 12px; border-radius: 6px; border: 1px solid #334155; background: #020617; color: #f8fafc; }
+    .grid-perfil { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #1e293b; font-size: 0.85rem; }
+    .chat-box { background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; max-height: 170px; overflow-y: auto; margin-bottom: 10px; font-size: 0.88rem; }
   </style>
 </head>
 <body>
-  <% const isAdmin = utilizador && (utilizador.role || "").toLowerCase() === "administrador"; %>
+  <%
+    const isAdmin = utilizador && String(utilizador.role || "").toLowerCase() === "administrador";
+    const promoLiberado = Boolean(utilizador && utilizador.codigoPromocionalLiberado);
+  %>
 
   <header>
     <div class="marca">AlphaTV</div>
-    <div class="topo-direita">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
       <span>Olá, <strong><%= utilizador ? utilizador.nome : "Utilizador" %></strong></span>
-
       <% if (isAdmin) { %>
-        <span class="badge-admin">Administrador</span>
-        <a href="/admin" class="btn">Ir para Dashboard Admin</a>
+        <a href="/admin" class="btn">Dashboard Admin</a>
       <% } else { %>
-        <span class="badge-user">Utilizador</span>
+        <a href="/subscricao" class="btn">Planos / Histórico</a>
       <% } %>
-
       <a href="/logout" class="btn btn-sair">Sair</a>
     </div>
   </header>
 
-  <% if (!isAdmin && typeof acessoInfo !== "undefined" && acessoInfo && acessoInfo.emTeste) { %>
-    <div class="banner-trial">
-      <span>
-        Período gratuito de 7 dias ativo: restam <strong><%= acessoInfo.diasRestantes %> dia(s)</strong> antes da subscrição.
-      </span>
-      <a href="/subscricao" class="btn">Ver Planos / Subscrever</a>
-    </div>
-  <% } %>
-
   <main>
-    <div class="card-player">
-      <h2>Conteúdo Interno</h2>
+    <% if (!isAdmin && typeof acessoInfo !== "undefined" && acessoInfo && acessoInfo.emTeste) { %>
+      <div class="banner-trial">
+        <span>Período gratuito de 7 dias ativo: restam <strong><%= acessoInfo.diasRestantes %> dia(s)</strong> antes da subscrição.</span>
+        <a href="/subscricao" class="btn">Ver Planos (30 a 180 dias)</a>
+      </div>
+    <% } %>
+
+    <div class="card">
+      <h2 style="margin-top:0; color:#38bdf8;">Conteúdo Interno</h2>
       <video id="videoPlayer" controls preload="metadata"></video>
 
       <% if (isAdmin) { %>
         <div class="barra-admin-link">
-          <input
-            type="text"
-            id="inputLinkVideo"
-            placeholder="Área Admin: cola aqui um link de vídeo (.mp4 ou .m3u8)..."
-          />
+          <input type="text" id="inputLinkVideo" placeholder="Área Admin: cola aqui um link de vídeo (.mp4 ou .m3u8)..." />
           <button type="button" class="btn" onclick="reproduzirLink()">Reproduzir</button>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="grid-perfil">
+      <div class="card">
+        <h3 style="margin-top:0; color:#38bdf8;">Código Promocional para Convidar</h3>
+        <% if (promoLiberado && utilizador.codigoPromocional) { %>
+          <p>O teu código promocional está liberado pelo administrador:</p>
+          <div style="background:#020617; border:1px solid #38bdf8; padding:10px; border-radius:6px; font-weight:bold; color:#38bdf8;">
+            <%= utilizador.codigoPromocional %>
+          </div>
+          <p style="font-size:0.85rem; color:#94a3b8; margin-top:8px;">
+            Convites registados: <strong><%= utilizador.convitesRealizados || 0 %></strong>
+          </p>
+        <% } else if (promoLiberado) { %>
+          <p>O administrador liberou o teu acesso para gerar código promocional de convite:</p>
+          <form action="/convite/gerar" method="POST" style="margin:0;">
+            <button type="submit" class="btn">Gerar Meu Código Promocional</button>
+          </form>
+        <% } else { %>
+          <p style="color:#94a3b8;">
+            A geração de código promocional para convidar outras pessoas só fica disponível quando liberada pelo administrador.
+          </p>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0; color:#38bdf8;">Suporte Técnico (WhatsApp, Telegram e Chat Direto)</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+          <a href="https://wa.me/351900000000?text=Ol%C3%A1%20suporte%20AlphaTV" target="_blank" rel="noopener" class="btn">WhatsApp</a>
+          <a href="https://t.me/AlphaTVSuporte" target="_blank" rel="noopener" class="btn">Telegram</a>
+        </div>
+        <div id="chatMensagens" class="chat-box">
+          <div><strong>Suporte AlphaTV:</strong> Olá! Em que podemos ajudar?</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="inputChatSuporte" placeholder="Escreve a tua mensagem..." style="flex:1; padding:8px 10px; border-radius:6px; border:1px solid #334155; background:#020617; color:#fff;" />
+          <button type="button" class="btn" onclick="enviarChatDireto()">Enviar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0; color:#38bdf8;">Histórico de Compras no Perfil</h3>
+      <% if (!historicoCompras || historicoCompras.length === 0) { %>
+        <p style="color:#94a3b8;">Nenhuma compra confirmada até ao momento.</p>
+      <% } else { %>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Recibo</th>
+                <th>Plano</th>
+                <th>Valor</th>
+                <th>Válido Até</th>
+                <th>Recibo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% historicoCompras.forEach(function(c) { %>
+                <tr>
+                  <td><%= c.codigoRecibo %></td>
+                  <td><%= c.nomePlano %></td>
+                  <td><%= Number(c.valorFinal).toFixed(2) %> <%= c.moeda || "EUR" %></td>
+                  <td><%= new Date(c.validoAte).toLocaleDateString("pt-PT") %></td>
+                  <td><a href="/recibo/<%= encodeURIComponent(c.codigoRecibo) %>" class="btn">Abrir</a></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
         </div>
       <% } %>
     </div>
@@ -172,11 +138,20 @@
     function reproduzirLink() {
       const input = document.getElementById("inputLinkVideo");
       const video = document.getElementById("videoPlayer");
-      if (!input || !video) return;
-      const url = input.value.trim();
-      if (!url) return;
-      video.src = url;
+      if (!input || !video || !input.value.trim()) return;
+      video.src = input.value.trim();
       video.play().catch(() => {});
+    }
+
+    function enviarChatDireto() {
+      const inp = document.getElementById("inputChatSuporte");
+      const box = document.getElementById("chatMensagens");
+      if (!inp || !box || !inp.value.trim()) return;
+      const texto = inp.value.trim();
+      box.innerHTML += `<div style="margin-top:6px;"><strong>Tu:</strong> ${texto.replace(/</g, "&lt;")}</div>`;
+      box.innerHTML += `<div style="margin-top:4px; color:#38bdf8;"><strong>Suporte:</strong> Mensagem registada! Para resposta imediata utiliza também WhatsApp ou Telegram.</div>`;
+      inp.value = "";
+      box.scrollTop = box.scrollHeight;
     }
   </script>
 </body>

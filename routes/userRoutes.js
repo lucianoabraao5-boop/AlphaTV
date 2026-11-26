@@ -1,65 +1,57 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const Compra = require("../models/Compra");
 const userController = require("../controllers/userController");
+const { gerarCodigoPromocional } = require("../services/alphaService");
 const {
   verificarSessao,
   verificarAdmin,
 } = require("../authMiddlewares/authMiddleware");
 
-// Rotas públicas (Cadastro e Login)
+// Acesso e recuperação por telefone segundo país (PT / BR / OUTROS)
 router.get("/", userController.mostrarPaginaAcesso);
 router.get("/login", userController.mostrarPaginaAcesso);
 router.post("/cadastrar", userController.cadastrar);
 router.post("/login", userController.login);
 router.get("/logout", userController.logout);
 
-// Página de cobrança / subscrição após os 7 dias
-router.get("/subscricao", verificarSessao, async (req, res) => {
-  try {
-    const userAtual = await User.findById(req.session.utilizador.id);
-    res.render("subscricao", {
-      utilizador: userAtual || req.session.utilizador,
-    });
-  } catch (erro) {
-    console.error("Erro ao carregar /subscricao:", erro);
-    res.render("subscricao", {
-      utilizador: req.session.utilizador,
-    });
-  }
-});
+router.post(
+  "/recuperar/enviar-codigo",
+  userController.solicitarRecuperacaoTelefone,
+);
+router.post(
+  "/recuperar/confirmar",
+  userController.confirmarRecuperacaoTelefone,
+);
 
-// Ativar subscrição de 30 dias (após os 7 dias gratuitos)
-router.post("/subscricao/ativar", verificarSessao, async (req, res) => {
-  try {
-    const user = await User.findById(req.session.utilizador.id);
-    if (!user) {
-      return res.redirect("/");
-    }
+// Planos (30, 60, 90, 180 dias), pagamento + confirmação, recibo e código promocional
+router.get("/subscricao", verificarSessao, userController.mostrarSubscricao);
+router.post(
+  "/subscricao/pagar",
+  verificarSessao,
+  userController.iniciarPagamento,
+);
+router.post(
+  "/subscricao/confirmar/:codigoRecibo",
+  verificarSessao,
+  userController.confirmarPagamento,
+);
+router.get("/recibo/:codigoRecibo", verificarSessao, userController.verRecibo);
+router.post(
+  "/convite/gerar",
+  verificarSessao,
+  userController.gerarCodigoConviteUtilizador,
+);
 
-    const agora = new Date();
-    const baseData =
-      user.pagoAte && new Date(user.pagoAte) > agora
-        ? new Date(user.pagoAte).getTime()
-        : agora.getTime();
-
-    user.statusSubscricao = "ativo";
-    user.pagoAte = new Date(baseData + 30 * 24 * 60 * 60 * 1000);
-    await user.save();
-
-    return res.redirect("/player");
-  } catch (erro) {
-    console.error("Erro ao ativar subscrição:", erro);
-    return res.redirect("/subscricao");
-  }
-});
-
-// Rota administrativa (apenas Administrador com sessão ativa)
+// Rota administrativa
 router.get("/admin", verificarAdmin, async (req, res) => {
   try {
     const utilizadores = await User.find().sort({ _id: -1 });
+    const compras = await Compra.find().sort({ criadoEm: -1 }).limit(30);
     res.render("admin", {
       utilizadores,
+      compras,
       utilizador: req.session.utilizador,
     });
   } catch (erro) {
@@ -68,21 +60,98 @@ router.get("/admin", verificarAdmin, async (req, res) => {
   }
 });
 
-// Renovar / adicionar dias de gratuidade ao utilizador
+// Administrador confirma pagamento pendente e libera acesso imediatamente
+router.post(
+  "/admin/compras/:codigoRecibo/confirmar",
+  verificarAdmin,
+  async (req, res) => {
+    try {
+      const compra = await Compra.findOne({
+        codigoRecibo: req.params.codigoRecibo,
+      });
+      if (!compra) return res.redirect("/admin");
+
+      const user = await User.findById(compra.utilizadorId);
+      if (user && compra.status !== "confirmado") {
+        const agora = new Date();
+        const baseData =
+          user.statusSubscricao === "ativo" &&
+          user.pagoAte &&
+          new Date(user.pagoAte) > agora
+            ? new Date(user.pagoAte).getTime()
+            : agora.getTime();
+        const validoAte = new Date(
+          baseData + compra.planoDias * 24 * 60 * 60 * 1000,
+        );
+
+        compra.status = "confirmado";
+        compra.confirmadoEm = agora;
+        compra.validoAte = validoAte;
+        await compra.save();
+
+        user.statusSubscricao = "ativo";
+        user.pagoAte = validoAte;
+        user.historicoCompras.push({
+          codigoRecibo: compra.codigoRecibo,
+          planoDias: compra.planoDias,
+          nomePlano: compra.nomePlano,
+          valorBase: compra.valorBase,
+          desconto: compra.desconto,
+          valorFinal: compra.valorFinal,
+          moeda: compra.moeda,
+          metodoPagamento: compra.metodoPagamento,
+          referenciaPagamento: compra.referenciaPagamento,
+          codigoPromocionalUsado: compra.codigoPromocionalUsado,
+          status: "confirmado",
+          dataPagamento: agora,
+          validoAte,
+        });
+        await user.save();
+      }
+
+      return res.redirect("/admin");
+    } catch (erro) {
+      console.error("Erro ao confirmar compra no admin:", erro);
+      return res.redirect("/admin");
+    }
+  },
+);
+
+// Administrador libera ou bloqueia permissão de código promocional de convite
+router.post(
+  "/admin/utilizadores/:id/promocional",
+  verificarAdmin,
+  async (req, res) => {
+    try {
+      const alvo = await User.findById(req.params.id);
+      if (alvo) {
+        const liberar = !alvo.codigoPromocionalLiberado;
+        alvo.codigoPromocionalLiberado = liberar;
+        if (liberar && !alvo.codigoPromocional) {
+          alvo.codigoPromocional = gerarCodigoPromocional(alvo.nome);
+        }
+        await alvo.save();
+      }
+      return res.redirect("/admin");
+    } catch (erro) {
+      console.error("Erro ao alterar permissão promocional:", erro);
+      return res.redirect("/admin");
+    }
+  },
+);
+
+// Renovar dias de gratuidade
 router.post(
   "/admin/utilizadores/:id/renovar-teste",
   verificarAdmin,
   async (req, res) => {
     try {
       const alvo = await User.findById(req.params.id);
-      if (!alvo) {
-        return res.redirect("/admin");
-      }
+      if (!alvo) return res.redirect("/admin");
 
       const diasRaw = parseInt(req.body.dias, 10);
       const diasGratuitos =
         Number.isFinite(diasRaw) && diasRaw > 0 ? diasRaw : 7;
-
       const agora = new Date();
       const trialAtual = alvo.trialEndsAt ? new Date(alvo.trialEndsAt) : null;
       const baseData =
@@ -96,7 +165,6 @@ router.post(
       if (alvo.statusSubscricao === "expirado") {
         alvo.statusSubscricao = "trial";
       }
-
       await alvo.save();
       return res.redirect("/admin");
     } catch (erro) {
@@ -106,7 +174,7 @@ router.post(
   },
 );
 
-// Alternar perfil (Utilizador <-> Administrador)
+// Alternar perfil
 router.post(
   "/admin/utilizadores/:id/role",
   verificarAdmin,
@@ -114,7 +182,8 @@ router.post(
     try {
       const alvo = await User.findById(req.params.id);
       if (alvo) {
-        const atualAdmin = (alvo.role || "").toLowerCase() === "administrador";
+        const atualAdmin =
+          String(alvo.role || "").toLowerCase() === "administrador";
         alvo.role = atualAdmin ? "Utilizador" : "Administrador";
         await alvo.save();
       }

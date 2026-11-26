@@ -1,104 +1,544 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Compra = require("../models/Compra");
+const {
+  PLANOS_SUBSCRICAO,
+  METODOS_PAGAMENTO,
+  obterPlano,
+  normalizarTelefonePorPais,
+  gerarCodigoVerificacao,
+  gerarCodigoPromocional,
+  gerarCodigoRecibo,
+  gerarReferenciaPagamento,
+  enviarMensagemRecuperacao,
+} = require("../services/alphaService");
 
-// Página inicial pública (Login e Cadastro)
-exports.mostrarPaginaAcesso = (req, res) => {
-  if (req.session.utilizador) {
-    return res.redirect(
-      req.session.utilizador.role === "Administrador" ? "/admin" : "/player",
-    );
-  }
-  res.render("acesso", { erro: null });
-};
+function isAdminRole(role) {
+  return String(role || "").toLowerCase() === "administrador";
+}
 
-// Cadastro público -> força sempre Utilizador e cria sessão
-exports.cadastrar = async (req, res) => {
+function mostrarPaginaAcesso(req, res) {
+  res.render("acesso", {
+    erro: null,
+    sucesso: null,
+    codigoDemo: null,
+    passoRecuperacao: "solicitar",
+    dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
+  });
+}
+
+async function cadastrar(req, res) {
   try {
-    const { nome, email, password } = req.body;
+    const { nome, email, password, pais, telefone, codigoConvite } = req.body;
 
-    const existe = await User.findOne({ email: email.toLowerCase().trim() });
-    if (existe) {
-      return res.render("acesso", { erro: "Este e-mail já está registado." });
+    if (!nome || !email || !password) {
+      return res.status(400).render("acesso", {
+        erro: "Preencha nome, e-mail e senha.",
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "solicitar",
+        dadosRecuperacao: {
+          pais: pais || "PT",
+          telefone: telefone || "",
+          email: email || "",
+        },
+      });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const emailLimpo = String(email).trim().toLowerCase();
+    const existente = await User.findOne({ email: emailLimpo });
+    if (existente) {
+      return res.status(400).render("acesso", {
+        erro: "Já existe uma conta registada com este e-mail.",
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "solicitar",
+        dadosRecuperacao: {
+          pais: pais || "PT",
+          telefone: telefone || "",
+          email: emailLimpo,
+        },
+      });
+    }
 
-    // No cadastro:
+    let telValidado = { valido: true, telefoneE164: "", pais: pais || "PT" };
+    if (telefone && String(telefone).trim() !== "") {
+      telValidado = normalizarTelefonePorPais(pais, telefone);
+      if (!telValidado.valido) {
+        return res.status(400).render("acesso", {
+          erro: telValidado.erro,
+          sucesso: null,
+          codigoDemo: null,
+          passoRecuperacao: "solicitar",
+          dadosRecuperacao: {
+            pais: pais || "PT",
+            telefone: telefone || "",
+            email: emailLimpo,
+          },
+        });
+      }
+    }
+
+    let codigoValidoUsado = null;
+    if (codigoConvite && String(codigoConvite).trim() !== "") {
+      const codigoLimpo = String(codigoConvite).trim().toUpperCase();
+      const padrinho = await User.findOne({
+        codigoPromocional: codigoLimpo,
+        codigoPromocionalLiberado: true,
+      });
+      if (padrinho) {
+        codigoValidoUsado = codigoLimpo;
+        padrinho.convitesRealizados = (padrinho.convitesRealizados || 0) + 1;
+        await padrinho.save();
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(String(password), 10);
     const seteDiasMs = 7 * 24 * 60 * 60 * 1000;
-    const novoUtilizador = await User.create({
-      nome,
-      email,
+
+    const novoUser = await User.create({
+      nome: String(nome).trim(),
+      email: emailLimpo,
       password: passwordHash,
       role: "Utilizador",
+      pais: telValidado.pais,
+      telefone: telValidado.telefoneE164,
       trialEndsAt: new Date(Date.now() + seteDiasMs),
       statusSubscricao: "trial",
+      convidadoPorCodigo: codigoValidoUsado,
     });
 
-    // No login (depois de validar email e password):
-    const isAdmin = (user.role || "").toLowerCase() === "administrador";
-
-    req.session.utilizador = {
-      id: user._id,
-      nome: user.nome,
-      email: user.email,
-      role: isAdmin ? "Administrador" : "Utilizador",
-    };
-
-    return res.redirect(isAdmin ? "/admin" : "/player");
-
-    // Inicia sessão automaticamente após cadastro
     req.session.utilizador = {
       id: novoUser._id,
       nome: novoUser.nome,
       email: novoUser.email,
-      role: novoUser.role,
+      role: "Utilizador",
     };
 
     return res.redirect("/player");
   } catch (erro) {
     console.error("Erro no cadastro:", erro);
-    return res.render("acesso", {
-      erro: "Erro ao criar conta. Tenta novamente.",
+    return res.status(500).render("acesso", {
+      erro: "Erro interno ao criar conta.",
+      sucesso: null,
+      codigoDemo: null,
+      passoRecuperacao: "solicitar",
+      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
     });
   }
-};
+}
 
-// Login -> valida credenciais e guarda na sessão
-exports.login = async (req, res) => {
+async function login(req, res) {
   try {
     const { email, password } = req.body;
+    const emailLimpo = String(email || "")
+      .trim()
+      .toLowerCase();
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ email: emailLimpo });
     if (!user) {
-      return res.render("acesso", {
-        erro: "E-mail ou palavra-passe inválidos.",
+      return res.status(401).render("acesso", {
+        erro: "E-mail ou senha inválidos.",
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "solicitar",
+        dadosRecuperacao: { pais: "PT", telefone: "", email: emailLimpo },
       });
     }
 
-    const senhaValida = await bcrypt.compare(password, user.password);
-    if (!senhaValida) {
-      return res.render("acesso", {
-        erro: "E-mail ou palavra-passe inválidos.",
+    const senhaCorreta = await bcrypt.compare(
+      String(password || ""),
+      user.password,
+    );
+    if (!senhaCorreta) {
+      return res.status(401).render("acesso", {
+        erro: "E-mail ou senha inválidos.",
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "solicitar",
+        dadosRecuperacao: {
+          pais: user.pais || "PT",
+          telefone: user.telefone || "",
+          email: emailLimpo,
+        },
       });
     }
 
+    const admin = isAdminRole(user.role);
     req.session.utilizador = {
       id: user._id,
       nome: user.nome,
       email: user.email,
-      role: user.role,
+      role: admin ? "Administrador" : "Utilizador",
     };
 
-    return res.redirect(user.role === "Administrador" ? "/admin" : "/player");
+    return res.redirect(admin ? "/admin" : "/player");
   } catch (erro) {
     console.error("Erro no login:", erro);
-    return res.render("acesso", { erro: "Erro ao iniciar sessão." });
+    return res.status(500).render("acesso", {
+      erro: "Erro ao iniciar sessão.",
+      sucesso: null,
+      codigoDemo: null,
+      passoRecuperacao: "solicitar",
+      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
+    });
   }
-};
+}
 
-// Terminar sessão
-exports.logout = (req, res) => {
+function logout(req, res) {
   req.session.destroy(() => {
     res.redirect("/");
   });
+}
+
+async function solicitarRecuperacaoTelefone(req, res) {
+  try {
+    const { pais, telefone, email } = req.body;
+    const telCheck = normalizarTelefonePorPais(pais, telefone);
+
+    if (!telCheck.valido) {
+      return res.status(400).render("acesso", {
+        erro: telCheck.erro,
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "solicitar",
+        dadosRecuperacao: {
+          pais: pais || "PT",
+          telefone: telefone || "",
+          email: email || "",
+        },
+      });
+    }
+
+    const filtro = { telefone: telCheck.telefoneE164 };
+    if (email && String(email).trim() !== "") {
+      filtro.email = String(email).trim().toLowerCase();
+    }
+
+    const user = await User.findOne(filtro);
+    if (!user) {
+      return res.status(404).render("acesso", {
+        erro: `Nenhuma conta encontrada para ${telCheck.telefoneE164} (${telCheck.pais}).`,
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "solicitar",
+        dadosRecuperacao: {
+          pais: telCheck.pais,
+          telefone: telCheck.telefoneE164,
+          email: email || "",
+        },
+      });
+    }
+
+    const codigo = gerarCodigoVerificacao();
+    user.codigoRecuperacao = codigo;
+    user.codigoRecuperacaoExpira = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    const envio = await enviarMensagemRecuperacao({
+      telefoneE164: telCheck.telefoneE164,
+      pais: telCheck.pais,
+      codigo,
+      nome: user.nome,
+    });
+
+    return res.render("acesso", {
+      erro: null,
+      sucesso: `Código enviado por mensagem de telefone para ${telCheck.telefoneE164} (${telCheck.pais}).`,
+      codigoDemo: envio.enviadoExterno ? null : codigo,
+      passoRecuperacao: "confirmar",
+      dadosRecuperacao: {
+        pais: telCheck.pais,
+        telefone: telCheck.telefoneE164,
+        email: user.email,
+      },
+    });
+  } catch (erro) {
+    console.error("Erro ao solicitar recuperação:", erro);
+    return res.status(500).render("acesso", {
+      erro: "Erro ao enviar mensagem de recuperação.",
+      sucesso: null,
+      codigoDemo: null,
+      passoRecuperacao: "solicitar",
+      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
+    });
+  }
+}
+
+async function confirmarRecuperacaoTelefone(req, res) {
+  try {
+    const { telefone, codigo, novaSenha } = req.body;
+    const telLimpo = String(telefone || "").trim();
+
+    if (!codigo || !novaSenha || String(novaSenha).length < 4) {
+      return res.status(400).render("acesso", {
+        erro: "Informe o código recebido e uma nova senha (mínimo 4 caracteres).",
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "confirmar",
+        dadosRecuperacao: { pais: "PT", telefone: telLimpo, email: "" },
+      });
+    }
+
+    const user = await User.findOne({ telefone: telLimpo });
+    const agora = new Date();
+
+    if (
+      !user ||
+      !user.codigoRecuperacao ||
+      String(user.codigoRecuperacao).trim() !== String(codigo).trim() ||
+      !user.codigoRecuperacaoExpira ||
+      new Date(user.codigoRecuperacaoExpira) < agora
+    ) {
+      return res.status(400).render("acesso", {
+        erro: "Código inválido ou expirado.",
+        sucesso: null,
+        codigoDemo: null,
+        passoRecuperacao: "confirmar",
+        dadosRecuperacao: {
+          pais: user ? user.pais : "PT",
+          telefone: telLimpo,
+          email: user ? user.email : "",
+        },
+      });
+    }
+
+    user.password = await bcrypt.hash(String(novaSenha), 10);
+    user.codigoRecuperacao = null;
+    user.codigoRecuperacaoExpira = null;
+    await user.save();
+
+    return res.render("acesso", {
+      erro: null,
+      sucesso: "Senha redefinida com sucesso! Faça login.",
+      codigoDemo: null,
+      passoRecuperacao: "solicitar",
+      dadosRecuperacao: {
+        pais: user.pais || "PT",
+        telefone: telLimpo,
+        email: user.email,
+      },
+    });
+  } catch (erro) {
+    console.error("Erro ao confirmar recuperação:", erro);
+    return res.status(500).render("acesso", {
+      erro: "Erro ao redefinir a senha.",
+      sucesso: null,
+      codigoDemo: null,
+      passoRecuperacao: "confirmar",
+      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
+    });
+  }
+}
+
+async function mostrarSubscricao(req, res) {
+  try {
+    const user = await User.findById(req.session.utilizador.id);
+    if (!user) return res.redirect("/");
+
+    const comprasPendentes = await Compra.find({
+      utilizadorId: user._id,
+      status: "pendente",
+    }).sort({ criadoEm: -1 });
+
+    return res.render("subscricao", {
+      utilizador: user,
+      planos: Object.values(PLANOS_SUBSCRICAO),
+      metodos: METODOS_PAGAMENTO,
+      comprasPendentes,
+      historicoCompras: [...(user.historicoCompras || [])].reverse(),
+      erro: null,
+    });
+  } catch (erro) {
+    console.error("Erro ao carregar /subscricao:", erro);
+    return res.redirect("/player");
+  }
+}
+
+// Etapa 1: cria pedido de pagamento pendente (ainda não libera o acesso antes da confirmação)
+async function iniciarPagamento(req, res) {
+  try {
+    const { planoDias, metodoPagamento, codigoPromocional } = req.body;
+    const plano = obterPlano(planoDias);
+    if (!plano) {
+      return res.redirect("/subscricao");
+    }
+
+    const metodoValido = METODOS_PAGAMENTO.find(
+      (m) => m.id === metodoPagamento,
+    );
+    const nomeMetodo = metodoValido ? metodoValido.nome : "Pagamento";
+
+    const user = await User.findById(req.session.utilizador.id);
+    if (!user) return res.redirect("/");
+
+    let desconto = 0;
+    let codigoAplicado = null;
+
+    if (codigoPromocional && String(codigoPromocional).trim() !== "") {
+      const codLimpo = String(codigoPromocional).trim().toUpperCase();
+      const donoCodigo = await User.findOne({
+        codigoPromocional: codLimpo,
+        codigoPromocionalLiberado: true,
+        _id: { $ne: user._id },
+      });
+      if (donoCodigo) {
+        codigoAplicado = codLimpo;
+        desconto = Number((plano.valorBase * 0.1).toFixed(2));
+      }
+    }
+
+    const valorFinal = Number(
+      Math.max(0.5, plano.valorBase - desconto).toFixed(2),
+    );
+    const codigoRecibo = gerarCodigoRecibo();
+    const referenciaPagamento = gerarReferenciaPagamento(metodoPagamento);
+
+    await Compra.create({
+      utilizadorId: user._id,
+      nomeUtilizador: user.nome,
+      emailUtilizador: user.email,
+      codigoRecibo,
+      planoDias: plano.dias,
+      nomePlano: plano.nome,
+      valorBase: plano.valorBase,
+      desconto,
+      valorFinal,
+      moeda: plano.moeda,
+      metodoPagamento: nomeMetodo,
+      referenciaPagamento,
+      codigoPromocionalUsado: codigoAplicado,
+      status: "pendente",
+      criadoEm: new Date(),
+    });
+
+    return res.redirect("/subscricao");
+  } catch (erro) {
+    console.error("Erro ao iniciar pagamento:", erro);
+    return res.redirect("/subscricao");
+  }
+}
+
+// Etapa 2: confirma o pagamento e só então libera o acesso, gera o recibo e grava no histórico
+async function confirmarPagamento(req, res) {
+  try {
+    const { codigoRecibo } = req.params;
+    const compra = await Compra.findOne({
+      codigoRecibo,
+      utilizadorId: req.session.utilizador.id,
+    });
+
+    if (!compra) {
+      return res.status(404).send("Pedido de pagamento não encontrado.");
+    }
+
+    const user = await User.findById(req.session.utilizador.id);
+    if (!user) return res.redirect("/");
+
+    if (compra.status !== "confirmado") {
+      const agora = new Date();
+      const baseData =
+        user.statusSubscricao === "ativo" &&
+        user.pagoAte &&
+        new Date(user.pagoAte) > agora
+          ? new Date(user.pagoAte).getTime()
+          : agora.getTime();
+
+      const validoAte = new Date(
+        baseData + compra.planoDias * 24 * 60 * 60 * 1000,
+      );
+
+      compra.status = "confirmado";
+      compra.confirmadoEm = agora;
+      compra.validoAte = validoAte;
+      await compra.save();
+
+      user.statusSubscricao = "ativo";
+      user.pagoAte = validoAte;
+      user.historicoCompras.push({
+        codigoRecibo: compra.codigoRecibo,
+        planoDias: compra.planoDias,
+        nomePlano: compra.nomePlano,
+        valorBase: compra.valorBase,
+        desconto: compra.desconto,
+        valorFinal: compra.valorFinal,
+        moeda: compra.moeda,
+        metodoPagamento: compra.metodoPagamento,
+        referenciaPagamento: compra.referenciaPagamento,
+        codigoPromocionalUsado: compra.codigoPromocionalUsado,
+        status: "confirmado",
+        dataPagamento: agora,
+        validoAte,
+      });
+      await user.save();
+    }
+
+    return res.redirect(`/recibo/${encodeURIComponent(compra.codigoRecibo)}`);
+  } catch (erro) {
+    console.error("Erro ao confirmar pagamento:", erro);
+    return res.redirect("/subscricao");
+  }
+}
+
+async function verRecibo(req, res) {
+  try {
+    const { codigoRecibo } = req.params;
+    const user = await User.findById(req.session.utilizador.id);
+    if (!user) return res.redirect("/");
+
+    const compra =
+      (user.historicoCompras || []).find(
+        (c) => c.codigoRecibo === codigoRecibo,
+      ) || (await Compra.findOne({ codigoRecibo, utilizadorId: user._id }));
+
+    if (!compra) {
+      return res.status(404).send("Recibo não encontrado.");
+    }
+
+    return res.render("recibo", {
+      utilizador: user,
+      compra,
+    });
+  } catch (erro) {
+    console.error("Erro ao abrir recibo:", erro);
+    return res.redirect("/subscricao");
+  }
+}
+
+// Gera código promocional de convite APENAS se o administrador tiver liberado para esta conta
+async function gerarCodigoConviteUtilizador(req, res) {
+  try {
+    const user = await User.findById(req.session.utilizador.id);
+    if (!user) return res.redirect("/");
+
+    if (!user.codigoPromocionalLiberado) {
+      return res
+        .status(403)
+        .send("Código promocional ainda não liberado pelo administrador.");
+    }
+
+    if (!user.codigoPromocional) {
+      user.codigoPromocional = gerarCodigoPromocional(user.nome);
+      await user.save();
+    }
+
+    return res.redirect("/player");
+  } catch (erro) {
+    console.error("Erro ao gerar código promocional:", erro);
+    return res.redirect("/player");
+  }
+}
+
+module.exports = {
+  mostrarPaginaAcesso,
+  cadastrar,
+  login,
+  logout,
+  solicitarRecuperacaoTelefone,
+  confirmarRecuperacaoTelefone,
+  mostrarSubscricao,
+  iniciarPagamento,
+  confirmarPagamento,
+  verRecibo,
+  gerarCodigoConviteUtilizador,
 };
