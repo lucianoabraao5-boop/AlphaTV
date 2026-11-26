@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AlphaTV | Entrar ou Criar Conta</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       background-color: #050811;
@@ -101,7 +99,6 @@
       50% { opacity: 0.25; }
     }
 
-    /* === CONTEÚDO PRINCIPAL ACIMA DO FUNDO DE TV === */
     .conteudo-principal {
       position: relative;
       z-index: 1;
@@ -164,11 +161,6 @@
       font-size: 0.92rem;
     }
 
-    input:focus, select:focus {
-      outline: none;
-      border-color: #38bdf8;
-    }
-
     .grupo-telefone {
       display: flex;
       gap: 8px;
@@ -205,9 +197,7 @@
       cursor: pointer;
     }
 
-    .btn:hover {
-      background: #0ea5e9;
-    }
+    .btn:hover { background: #0ea5e9; }
 
     .barra-recuperar {
       margin-top: 14px;
@@ -228,18 +218,40 @@
       font-weight: bold;
     }
 
-    .link-recuperar:hover {
-      color: #7dd3fc;
-    }
-
     .painel-recuperacao {
       max-width: 960px;
       margin: 20px auto 0 auto;
       display: none;
     }
 
-    .painel-recuperacao.visivel {
-      display: block;
+    .painel-recuperacao.visivel { display: block; }
+
+    .qr-box {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    .qr-canvas-wrap {
+      background: #ffffff;
+      padding: 10px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-meta {
+      flex: 1;
+      min-width: 240px;
+      font-size: 0.88rem;
+      line-height: 1.5;
     }
 
     .alerta-erro {
@@ -248,16 +260,6 @@
       background: #7f1d1d;
       color: #fecaca;
       border: 1px solid #dc2626;
-      padding: 12px 16px;
-      border-radius: 8px;
-    }
-
-    .alerta-sucesso {
-      max-width: 960px;
-      margin: 0 auto 14px auto;
-      background: #082f49;
-      color: #bae6fd;
-      border: 1px solid #0284c7;
       padding: 12px 16px;
       border-radius: 8px;
     }
@@ -275,33 +277,17 @@
 
   <div class="conteudo-principal">
     <%
-      const recDados = (typeof dadosRecuperacao !== "undefined" && dadosRecuperacao)
-        ? dadosRecuperacao
-        : { pais: "PT", telefone: "", email: "" };
-      const passoAtual = (typeof passoRecuperacao !== "undefined" && passoRecuperacao)
-        ? passoRecuperacao
-        : "solicitar";
-      const abrirRecuperacaoInicial = passoAtual === "confirmar" || Boolean(recDados.telefone) || Boolean(recDados.email);
+      const qrObj = (typeof qrDados !== "undefined" && qrDados) ? qrDados : null;
+      const mostrarQrInicial = Boolean(typeof abrirQrInicial !== "undefined" && abrirQrInicial && qrObj);
     %>
 
     <div class="topo">
       <div class="marca">AlphaTV</div>
-      <div style="font-size: 0.86rem; color: #94a3b8;">7 dias gratuitos • Transmissão Digital</div>
+      <div style="font-size: 0.86rem; color: #94a3b8;">7 dias gratuitos • Recuperação por QR Code no logout</div>
     </div>
 
     <% if (typeof erro !== "undefined" && erro) { %>
       <div class="alerta-erro"><%= erro %></div>
-    <% } %>
-
-    <% if (typeof sucesso !== "undefined" && sucesso) { %>
-      <div class="alerta-sucesso">
-        <div><%= sucesso %></div>
-        <% if (typeof codigoDemo !== "undefined" && codigoDemo) { %>
-          <div style="margin-top: 6px;">
-            Código de confirmação (teste local): <strong><%= codigoDemo %></strong>
-          </div>
-        <% } %>
-      </div>
     <% } %>
 
     <div class="grid-acesso">
@@ -314,7 +300,7 @@
             id="loginEmail"
             name="email"
             placeholder="O teu e-mail"
-            value="<%= recDados.email || '' %>"
+            value="<%= qrObj && qrObj.email ? qrObj.email : '' %>"
             required
           />
 
@@ -331,7 +317,7 @@
         </form>
 
         <div class="barra-recuperar">
-          <span style="color:#94a3b8;">Esqueceste os dados?</span>
+          <span style="color:#94a3b8;">Consultar dados / QR da conta?</span>
           <button type="button" class="link-recuperar" onclick="alternarRecuperacao(true)">
             Recuperar acesso
           </button>
@@ -357,16 +343,10 @@
             <option value="OUTROS">Outros países (Internacional)</option>
           </select>
 
-          <label for="cadTelefone">Telefone (para recuperação por mensagem)</label>
+          <label for="cadTelefone">Telefone de contacto</label>
           <div class="grupo-telefone">
             <span id="cadPrefixo" class="prefixo-pais">+351</span>
-            <input
-              type="text"
-              id="cadTelefone"
-              name="telefone"
-              placeholder="Ex: 912345678"
-              required
-            />
+            <input type="text" id="cadTelefone" name="telefone" placeholder="Ex: 912345678" required />
           </div>
           <div id="cadDica" class="dica-pais">Portugal: 9 dígitos (ex: 912345678).</div>
 
@@ -378,61 +358,35 @@
       </div>
     </div>
 
-    <div id="painelRecuperacao" class="card painel-recuperacao <%= abrirRecuperacaoInicial ? 'visivel' : '' %>">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
-        <h2 style="margin:0;">Recuperar acesso</h2>
+    <div id="painelRecuperacao" class="card painel-recuperacao <%= mostrarQrInicial ? 'visivel' : '' %>">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <h2 style="margin:0;">Recuperar acesso • Dados em QR Code</h2>
         <button type="button" class="link-recuperar" onclick="alternarRecuperacao(false)">Ocultar</button>
       </div>
 
-      <% if (passoAtual !== "confirmar") { %>
-        <form action="/recuperar/enviar-codigo" method="POST">
-          <label for="recPais">País de origem / instalação</label>
-          <select id="recPais" name="pais" onchange="configurarCampoTelefone('rec')">
-            <option value="PT" <%= recDados.pais === "PT" ? "selected" : "" %>>Portugal (+351)</option>
-            <option value="BR" <%= recDados.pais === "BR" ? "selected" : "" %>>Brasil (+55)</option>
-            <option value="OUTROS" <%= recDados.pais === "OUTROS" ? "selected" : "" %>>Outros países</option>
-          </select>
-
-          <label for="recTelefone">Número de telefone registado</label>
-          <div class="grupo-telefone">
-            <span id="recPrefixo" class="prefixo-pais">+351</span>
-            <input
-              type="text"
-              id="recTelefone"
-              name="telefone"
-              value="<%= recDados.telefone || '' %>"
-              placeholder="Ex: 912345678"
-              required
-            />
+      <% if (qrObj) { %>
+        <div class="qr-box">
+          <div class="qr-canvas-wrap">
+            <canvas id="qrCanvas" width="180" height="180"></canvas>
           </div>
-          <div id="recDica" class="dica-pais">
-            Confirmação enviada por mensagem de telefone conforme o país selecionado.
+          <div class="qr-meta">
+            <div><strong>Dados da última sessão (Logout):</strong></div>
+            <div>Nome: <strong><%= qrObj.nome %></strong></div>
+            <div>E-mail: <strong><%= qrObj.email %></strong></div>
+            <div>País / Telefone: <strong><%= qrObj.pais %></strong> <%= qrObj.telefone ? ("• " + qrObj.telefone) : "" %></div>
+            <div>Estado: <strong><%= qrObj.statusSubscricao %></strong><%= qrObj.pagoAte ? (" (até " + qrObj.pagoAte + ")") : "" %></div>
+            <% if (qrObj.codigoPromocional) { %>
+              <div>Código Promocional: <strong style="color:#38bdf8;"><%= qrObj.codigoPromocional %></strong></div>
+            <% } %>
+            <div style="margin-top:10px; font-size:0.78rem; color:#94a3b8; word-break:break-all;">
+              Conteúdo QR: <span id="qrPayloadTexto"><%= JSON.stringify({ nome: qrObj.nome, email: qrObj.email, pais: qrObj.pais, telefone: qrObj.telefone, codigoPromocional: qrObj.codigoPromocional || null }) %></span>
+            </div>
           </div>
-
-          <label for="recEmail">E-mail da conta (opcional)</label>
-          <input
-            type="email"
-            id="recEmail"
-            name="email"
-            value="<%= recDados.email || '' %>"
-            placeholder="Opcional"
-          />
-
-          <button type="submit" class="btn">Enviar Mensagem de Confirmação</button>
-        </form>
+        </div>
       <% } else { %>
-        <form action="/recuperar/confirmar" method="POST">
-          <label for="confTelefone">Telefone confirmado</label>
-          <input type="text" id="confTelefone" name="telefone" value="<%= recDados.telefone || '' %>" readonly />
-
-          <label for="confCodigo">Código recebido por mensagem</label>
-          <input type="text" id="confCodigo" name="codigo" placeholder="Código de 6 dígitos" required />
-
-          <label for="confNovaSenha">Nova palavra-passe</label>
-          <input type="password" id="confNovaSenha" name="novaSenha" placeholder="Nova palavra-passe" required />
-
-          <button type="submit" class="btn">Confirmar Código e Redefinir</button>
-        </form>
+        <p style="color:#94a3b8; margin-top:10px;">
+          Inicia sessão e faz <strong>Sair (Logout)</strong> para gerar e disponibilizar aqui o QR Code com os dados da tua conta.
+        </p>
       <% } %>
     </div>
   </div>
@@ -471,8 +425,57 @@
       }
     }
 
+    function desenharQrSimbolico(canvas, texto) {
+      if (!canvas || !texto) return;
+      const ctx = canvas.getContext("2d");
+      const size = canvas.width;
+      const cells = 21;
+      const cell = Math.floor(size / cells);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+
+      function desenharOlho(ox, oy) {
+        ctx.fillStyle = "#050811";
+        ctx.fillRect(ox * cell, oy * cell, 7 * cell, 7 * cell);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect((ox + 1) * cell, (oy + 1) * cell, 5 * cell, 5 * cell);
+        ctx.fillStyle = "#0284c7";
+        ctx.fillRect((ox + 2) * cell, (oy + 2) * cell, 3 * cell, 3 * cell);
+      }
+
+      desenharOlho(0, 0);
+      desenharOlho(cells - 7, 0);
+      desenharOlho(0, cells - 7);
+
+      let hash = 2166136261;
+      for (let i = 0; i < texto.length; i++) {
+        hash ^= texto.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+
+      for (let r = 0; r < cells; r++) {
+        for (let c = 0; c < cells; c++) {
+          const emOlhoSupEsq = r < 8 && c < 8;
+          const emOlhoSupDir = r < 8 && c >= cells - 8;
+          const emOlhoInfEsq = r >= cells - 8 && c < 8;
+          if (emOlhoSupEsq || emOlhoSupDir || emOlhoInfEsq) continue;
+
+          const idx = r * cells + c + texto.charCodeAt(r % texto.length);
+          const bit = ((hash >>> (idx % 24)) ^ (r * 31 + c * 17 + texto.charCodeAt(idx % texto.length))) & 1;
+          if (bit === 1) {
+            ctx.fillStyle = "#050811";
+            ctx.fillRect(c * cell, r * cell, cell, cell);
+          }
+        }
+      }
+    }
+
     configurarCampoTelefone("cad");
-    configurarCampoTelefone("rec");
+    const payloadEl = document.getElementById("qrPayloadTexto");
+    const qrCanvas = document.getElementById("qrCanvas");
+    if (payloadEl && qrCanvas) {
+      desenharQrSimbolico(qrCanvas, payloadEl.textContent);
+    }
   </script>
 </body>
 </html>

@@ -30,25 +30,36 @@ function renderIndex(req, res, statusCode, dados = {}) {
     },
   });
 }
-
-function mostrarPaginaAcesso(req, res) {
-  return renderIndex(req, res, 200);
+function lerCookieQr(req) {
+  const headerCookie = req.headers && req.headers.cookie ? req.headers.cookie : "";
+  const match = headerCookie.match(/(?:^|;\s*)alphatv_qr_rec=([^;]+)/);
+  if (!match) return null;
+  try {
+    const jsonStr = Buffer.from(decodeURIComponent(match[1]), "base64").toString("utf8");
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    return null;
+  }
 }
 
-async function cadastrar(req, res) {
-  try {
-    const { nome, email, password, pais, telefone, codigoConvite } = req.body;
+function mostrarPaginaAcesso(req, res) {
+  let qrDados = null;
+  const rawCookie = req.cookies && req.cookies.alphatv_qr_rec ? req.cookies.alphatv_qr_rec : null;
 
-    if (!nome || !email || !password) {
-      return renderIndex(req, res, 400, {
-        erro: "Preencha nome, e-mail e palavra-passe.",
-        dadosRecuperacao: {
-          pais: pais || "PT",
-          telefone: telefone || "",
-          email: email || "",
-        },
-      });
+  if (rawCookie) {
+    try {
+      const decodificado = Buffer.from(String(rawCookie), "base64").toString("utf8");
+      qrDados = JSON.parse(decodificado);
+    } catch (e) {
+      qrDados = null;
     }
+  }
+
+  return renderIndex(req, res, 200, {
+    qrDados,
+    abrirQrInicial: Boolean(qrDados && req.query && req.query.qr === "1"),
+  });
+}
 
     const emailLimpo = String(email).trim().toLowerCase();
     const existente = await User.findOne({ email: emailLimpo });
@@ -167,47 +178,49 @@ async function login(req, res) {
   }
 }
 
-function logout(req, res) {
-  req.session.destroy(() => {
-    res.redirect("/");
-  });
-}
-
-async function solicitarRecuperacaoTelefone(req, res) {
+async function logout(req, res) {
   try {
-    const { pais, telefone, email } = req.body;
-    const telCheck = normalizarTelefonePorPais(pais, telefone);
+    const sessUser = req.session && req.session.utilizador ? req.session.utilizador : null;
+    let dadosQr = null;
 
-    if (!telCheck.valido) {
-      return renderIndex(req, res, 400, {
-        erro: telCheck.erro,
-        passoRecuperacao: "solicitar",
-        dadosRecuperacao: {
-          pais: pais || "PT",
-          telefone: telefone || "",
-          email: email || "",
-        },
+    if (sessUser && sessUser.id) {
+      const userDoc = await User.findById(sessUser.id).lean();
+      if (userDoc) {
+        dadosQr = {
+          nome: userDoc.nome,
+          email: userDoc.email,
+          pais: userDoc.pais || "PT",
+          telefone: userDoc.telefone || "",
+          role: userDoc.role || "Utilizador",
+          statusSubscricao: userDoc.statusSubscricao || "trial",
+          pagoAte: userDoc.pagoAte ? new Date(userDoc.pagoAte).toISOString().slice(0, 10) : null,
+          codigoPromocional:
+            userDoc.codigoPromocionalLiberado && userDoc.codigoPromocional
+              ? userDoc.codigoPromocional
+              : null,
+          geradoEm: new Date().toISOString(),
+        };
+      }
+    }
+
+    if (dadosQr) {
+      res.cookie("alphatv_qr_rec", Buffer.from(JSON.stringify(dadosQr)).toString("base64"), {
+        maxAge: 10 * 60 * 1000, // válido por 10 minutos após o logout
+        httpOnly: false,
+        sameSite: "lax",
       });
     }
 
-    const filtro = { telefone: telCheck.telefoneE164 };
-    if (email && String(email).trim() !== "") {
-      filtro.email = String(email).trim().toLowerCase();
-    }
-
-    const user = await User.findOne(filtro);
-    if (!user) {
-      return renderIndex(req, res, 404, {
-        erro: `Nenhuma conta encontrada para ${telCheck.telefoneE164} (${telCheck.pais}).`,
-        passoRecuperacao: "solicitar",
-        dadosRecuperacao: {
-          pais: telCheck.pais,
-          telefone: telCheck.telefoneE164,
-          email: email || "",
-        },
-      });
-    }
-
+    req.session.destroy(() => {
+      return res.redirect("/?qr=1");
+    });
+  } catch (erro) {
+    console.error("Erro no logout com QR:", erro);
+    req.session.destroy(() => {
+      return res.redirect("/");
+    });
+  }
+}
     const codigo = gerarCodigoVerificacao();
     user.codigoRecuperacao = codigo;
     user.codigoRecuperacaoExpira = new Date(Date.now() + 15 * 60 * 1000);
