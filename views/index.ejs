@@ -360,9 +360,26 @@
 
     <div id="painelRecuperacao" class="card painel-recuperacao <%= mostrarQrInicial ? 'visivel' : '' %>">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <h2 style="margin:0;">Recuperar acesso • Dados via QR Code</h2>
+        <h2 style="margin:0;">Recuperar acesso • QR Code da Conta</h2>
         <button type="button" class="link-recuperar" onclick="alternarRecuperacao(false)">Ocultar</button>
       </div>
+
+      <div id="qrConteudoAtivo" class="qr-box" style="<%= qrObj ? '' : 'display:none;' %>">
+        <div class="qr-canvas-wrap">
+          <canvas id="qrCanvas" width="220" height="220"></canvas>
+        </div>
+        <div class="qr-meta" id="qrDetalhesLista">
+          <div><strong>Acesso aos dados via QR Code</strong></div>
+          <p style="color:#94a3b8; margin:6px 0 0 0;">
+            Leia o QR Code com a câmara ou leitor QR para obter os dados da conta guardados no logout.
+          </p>
+        </div>
+      </div>
+
+      <p id="qrSemDadosMsg" style="color:#94a3b8; margin-top:10px; <%= qrObj ? 'display:none;' : '' %>">
+        Inicia sessão e faz <strong>Logout</strong> para gerar o <strong>QR Code</strong> com os dados da conta.
+      </p>
+    </div>
 
       <div id="qrConteudoAtivo" class="qr-box" style="<%= qrObj ? '' : 'display:none;' %>">
         <div class="qr-canvas-wrap">
@@ -657,43 +674,7 @@
       }
     }
 
-    function lerConteudoQrNoEcra() {
-      const alvo = document.getElementById("qrDadosDecodificados");
-      if (!alvo) return;
-
-      let texto = ultimoPayloadQrTexto;
-      if (!texto) {
-        try {
-          const salvo = localStorage.getItem("alphatv_last_qr_user");
-          if (salvo) texto = salvo;
-        } catch (e) {}
-      }
-
-      if (!texto) {
-        alvo.innerHTML = "<div style='color:#94a3b8;'>Sem dados de QR Code registados nesta sessão.</div>";
-        alvo.style.display = "block";
-        return;
-      }
-
-      try {
-        const obj = JSON.parse(texto);
-        alvo.innerHTML =
-          "<div style='padding:10px;border:1px solid #0284c7;border-radius:6px;background:#082f49;color:#e0f2fe;'>" +
-          "<div><strong>Nome:</strong> " + (obj.nome || "-") + "</div>" +
-          "<div><strong>E-mail:</strong> " + (obj.email || "-") + "</div>" +
-          "<div><strong>País / Telefone:</strong> " + (obj.pais || "PT") + (obj.telefone ? " • " + obj.telefone : "") + "</div>" +
-          "<div><strong>Perfil:</strong> " + (obj.role || "Utilizador") + "</div>" +
-          "<div><strong>Subscrição:</strong> " + (obj.statusSubscricao || "trial") + (obj.pagoAte ? " (até " + obj.pagoAte + ")" : "") + "</div>" +
-          (obj.codigoPromocional ? "<div><strong>Código Promocional:</strong> " + obj.codigoPromocional + "</div>" : "") +
-          "</div>";
-        alvo.style.display = "block";
-      } catch (e) {
-        alvo.textContent = texto;
-        alvo.style.display = "block";
-      }
-    }
-
-    function renderizarDadosQr(dados) {
+        function renderizarDadosQr(dados) {
       const boxAtivo = document.getElementById("qrConteudoAtivo");
       const msgSemDados = document.getElementById("qrSemDadosMsg");
       const qrCanvas = document.getElementById("qrCanvas");
