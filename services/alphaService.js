@@ -132,21 +132,27 @@ function gerarReferenciaPagamento(metodoId) {
     .toUpperCase()}`;
 }
 
+const twilio = require("twilio");
+
 async function enviarMensagemRecuperacao({ telefoneE164, pais, codigo, nome }) {
-  if (process.env.SMS_WEBHOOK_URL) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+
+  const corpoMensagem = `AlphaTV (${pais}): Olá ${nome}, o teu código de recuperação é ${codigo} (válido por 15 minutos).`;
+
+  if (accountSid && authToken && fromNumber) {
     try {
-      await fetch(process.env.SMS_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          telefone: telefoneE164,
-          pais,
-          mensagem: `AlphaTV (${pais}): Olá ${nome}, o teu código de recuperação é ${codigo} (válido por 15 minutos).`,
-        }),
+      const client = twilio(accountSid, authToken);
+      await client.messages.create({
+        body: corpoMensagem,
+        from: fromNumber,
+        to: telefoneE164,
       });
       return { enviadoExterno: true };
-    } catch (err) {
-      console.error("Erro ao enviar webhook de recuperação:", err);
+    } catch (erro) {
+      console.error("Erro ao enviar SMS via Twilio:", erro);
+      return { enviadoExterno: false };
     }
   }
 
