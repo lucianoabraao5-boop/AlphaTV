@@ -55,6 +55,7 @@ function mostrarPaginaAcesso(req, res) {
     }
   }
 
+  
   return renderIndex(req, res, 200, {
     qrDados,
     abrirQrInicial: Boolean(qrDados && req.query && req.query.qr === "1"),
