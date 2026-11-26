@@ -17,14 +17,22 @@ function isAdminRole(role) {
   return String(role || "").toLowerCase() === "administrador";
 }
 
-function mostrarPaginaAcesso(req, res) {
-  return res.render("index", {
-    erro: null,
-    sucesso: null,
-    codigoDemo: null,
-    passoRecuperacao: "solicitar",
-    dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
+function renderIndex(req, res, statusCode, dados = {}) {
+  return res.status(statusCode).render("index", {
+    erro: dados.erro || null,
+    sucesso: dados.sucesso || null,
+    codigoDemo: dados.codigoDemo || null,
+    passoRecuperacao: dados.passoRecuperacao || "solicitar",
+    dadosRecuperacao: dados.dadosRecuperacao || {
+      pais: "PT",
+      telefone: "",
+      email: "",
+    },
   });
+}
+
+function mostrarPaginaAcesso(req, res) {
+  return renderIndex(req, res, 200);
 }
 
 async function cadastrar(req, res) {
@@ -32,11 +40,8 @@ async function cadastrar(req, res) {
     const { nome, email, password, pais, telefone, codigoConvite } = req.body;
 
     if (!nome || !email || !password) {
-      return res.status(400).render("acesso", {
-        erro: "Preencha nome, e-mail e senha.",
-        sucesso: null,
-        codigoDemo: null,
-        passoRecuperacao: "solicitar",
+      return renderIndex(req, res, 400, {
+        erro: "Preencha nome, e-mail e palavra-passe.",
         dadosRecuperacao: {
           pais: pais || "PT",
           telefone: telefone || "",
@@ -48,11 +53,8 @@ async function cadastrar(req, res) {
     const emailLimpo = String(email).trim().toLowerCase();
     const existente = await User.findOne({ email: emailLimpo });
     if (existente) {
-      return res.status(400).render("acesso", {
+      return renderIndex(req, res, 400, {
         erro: "Já existe uma conta registada com este e-mail.",
-        sucesso: null,
-        codigoDemo: null,
-        passoRecuperacao: "solicitar",
         dadosRecuperacao: {
           pais: pais || "PT",
           telefone: telefone || "",
@@ -61,27 +63,21 @@ async function cadastrar(req, res) {
       });
     }
 
-    let telValidado = { valido: true, telefoneE164: "", pais: pais || "PT" };
-    if (telefone && String(telefone).trim() !== "") {
-      telValidado = normalizarTelefonePorPais(pais, telefone);
-      if (!telValidado.valido) {
-        return res.status(400).render("acesso", {
-          erro: telValidado.erro,
-          sucesso: null,
-          codigoDemo: null,
-          passoRecuperacao: "solicitar",
-          dadosRecuperacao: {
-            pais: pais || "PT",
-            telefone: telefone || "",
-            email: emailLimpo,
-          },
-        });
-      }
+    const telValidado = normalizarTelefonePorPais(pais, telefone);
+    if (!telValidado.valido) {
+      return renderIndex(req, res, 400, {
+        erro: telValidado.erro,
+        dadosRecuperacao: {
+          pais: pais || "PT",
+          telefone: telefone || "",
+          email: emailLimpo,
+        },
+      });
     }
 
     let codigoValidoUsado = null;
     if (codigoConvite && String(codigoConvite).trim() !== "") {
-      const codigoLimpo = String(codigoConvite).trim().toUpperCase();
+      const codigoLimpo = String(codigoConvite).trim();
       const padrinho = await User.findOne({
         codigoPromocional: codigoLimpo,
         codigoPromocionalLiberado: true,
@@ -118,12 +114,8 @@ async function cadastrar(req, res) {
     return res.redirect("/player");
   } catch (erro) {
     console.error("Erro no cadastro:", erro);
-    return res.status(500).render("acesso", {
+    return renderIndex(req, res, 500, {
       erro: "Erro interno ao criar conta.",
-      sucesso: null,
-      codigoDemo: null,
-      passoRecuperacao: "solicitar",
-      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
     });
   }
 }
@@ -137,11 +129,8 @@ async function login(req, res) {
 
     const user = await User.findOne({ email: emailLimpo });
     if (!user) {
-      return res.status(401).render("acesso", {
-        erro: "E-mail ou senha inválidos.",
-        sucesso: null,
-        codigoDemo: null,
-        passoRecuperacao: "solicitar",
+      return renderIndex(req, res, 401, {
+        erro: "E-mail ou palavra-passe inválidos.",
         dadosRecuperacao: { pais: "PT", telefone: "", email: emailLimpo },
       });
     }
@@ -151,11 +140,8 @@ async function login(req, res) {
       user.password,
     );
     if (!senhaCorreta) {
-      return res.status(401).render("acesso", {
-        erro: "E-mail ou senha inválidos.",
-        sucesso: null,
-        codigoDemo: null,
-        passoRecuperacao: "solicitar",
+      return renderIndex(req, res, 401, {
+        erro: "E-mail ou palavra-passe inválidos.",
         dadosRecuperacao: {
           pais: user.pais || "PT",
           telefone: user.telefone || "",
@@ -175,12 +161,8 @@ async function login(req, res) {
     return res.redirect(admin ? "/admin" : "/player");
   } catch (erro) {
     console.error("Erro no login:", erro);
-    return res.status(500).render("acesso", {
+    return renderIndex(req, res, 500, {
       erro: "Erro ao iniciar sessão.",
-      sucesso: null,
-      codigoDemo: null,
-      passoRecuperacao: "solicitar",
-      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
     });
   }
 }
@@ -197,10 +179,8 @@ async function solicitarRecuperacaoTelefone(req, res) {
     const telCheck = normalizarTelefonePorPais(pais, telefone);
 
     if (!telCheck.valido) {
-      return res.status(400).render("acesso", {
+      return renderIndex(req, res, 400, {
         erro: telCheck.erro,
-        sucesso: null,
-        codigoDemo: null,
         passoRecuperacao: "solicitar",
         dadosRecuperacao: {
           pais: pais || "PT",
@@ -217,10 +197,8 @@ async function solicitarRecuperacaoTelefone(req, res) {
 
     const user = await User.findOne(filtro);
     if (!user) {
-      return res.status(404).render("acesso", {
+      return renderIndex(req, res, 404, {
         erro: `Nenhuma conta encontrada para ${telCheck.telefoneE164} (${telCheck.pais}).`,
-        sucesso: null,
-        codigoDemo: null,
         passoRecuperacao: "solicitar",
         dadosRecuperacao: {
           pais: telCheck.pais,
@@ -242,8 +220,7 @@ async function solicitarRecuperacaoTelefone(req, res) {
       nome: user.nome,
     });
 
-    return res.render("acesso", {
-      erro: null,
+    return renderIndex(req, res, 200, {
       sucesso: `Código enviado por mensagem de telefone para ${telCheck.telefoneE164} (${telCheck.pais}).`,
       codigoDemo: envio.enviadoExterno ? null : codigo,
       passoRecuperacao: "confirmar",
@@ -255,12 +232,9 @@ async function solicitarRecuperacaoTelefone(req, res) {
     });
   } catch (erro) {
     console.error("Erro ao solicitar recuperação:", erro);
-    return res.status(500).render("acesso", {
+    return renderIndex(req, res, 500, {
       erro: "Erro ao enviar mensagem de recuperação.",
-      sucesso: null,
-      codigoDemo: null,
       passoRecuperacao: "solicitar",
-      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
     });
   }
 }
@@ -271,10 +245,8 @@ async function confirmarRecuperacaoTelefone(req, res) {
     const telLimpo = String(telefone || "").trim();
 
     if (!codigo || !novaSenha || String(novaSenha).length < 4) {
-      return res.status(400).render("acesso", {
-        erro: "Informe o código recebido e uma nova senha (mínimo 4 caracteres).",
-        sucesso: null,
-        codigoDemo: null,
+      return renderIndex(req, res, 400, {
+        erro: "Informe o código recebido e uma nova palavra-passe (mínimo 4 caracteres).",
         passoRecuperacao: "confirmar",
         dadosRecuperacao: { pais: "PT", telefone: telLimpo, email: "" },
       });
@@ -290,10 +262,8 @@ async function confirmarRecuperacaoTelefone(req, res) {
       !user.codigoRecuperacaoExpira ||
       new Date(user.codigoRecuperacaoExpira) < agora
     ) {
-      return res.status(400).render("acesso", {
+      return renderIndex(req, res, 400, {
         erro: "Código inválido ou expirado.",
-        sucesso: null,
-        codigoDemo: null,
         passoRecuperacao: "confirmar",
         dadosRecuperacao: {
           pais: user ? user.pais : "PT",
@@ -308,10 +278,8 @@ async function confirmarRecuperacaoTelefone(req, res) {
     user.codigoRecuperacaoExpira = null;
     await user.save();
 
-    return res.render("acesso", {
-      erro: null,
-      sucesso: "Senha redefinida com sucesso! Faça login.",
-      codigoDemo: null,
+    return renderIndex(req, res, 200, {
+      sucesso: "Palavra-passe redefinida com sucesso! Já podes iniciar sessão.",
       passoRecuperacao: "solicitar",
       dadosRecuperacao: {
         pais: user.pais || "PT",
@@ -321,12 +289,9 @@ async function confirmarRecuperacaoTelefone(req, res) {
     });
   } catch (erro) {
     console.error("Erro ao confirmar recuperação:", erro);
-    return res.status(500).render("acesso", {
-      erro: "Erro ao redefinir a senha.",
-      sucesso: null,
-      codigoDemo: null,
+    return renderIndex(req, res, 500, {
+      erro: "Erro ao redefinir a palavra-passe.",
       passoRecuperacao: "confirmar",
-      dadosRecuperacao: { pais: "PT", telefone: "", email: "" },
     });
   }
 }
@@ -355,14 +320,11 @@ async function mostrarSubscricao(req, res) {
   }
 }
 
-// Etapa 1: cria pedido de pagamento pendente (ainda não libera o acesso antes da confirmação)
 async function iniciarPagamento(req, res) {
   try {
     const { planoDias, metodoPagamento, codigoPromocional } = req.body;
     const plano = obterPlano(planoDias);
-    if (!plano) {
-      return res.redirect("/subscricao");
-    }
+    if (!plano) return res.redirect("/subscricao");
 
     const metodoValido = METODOS_PAGAMENTO.find(
       (m) => m.id === metodoPagamento,
@@ -376,7 +338,7 @@ async function iniciarPagamento(req, res) {
     let codigoAplicado = null;
 
     if (codigoPromocional && String(codigoPromocional).trim() !== "") {
-      const codLimpo = String(codigoPromocional).trim().toUpperCase();
+      const codLimpo = String(codigoPromocional).trim();
       const donoCodigo = await User.findOne({
         codigoPromocional: codLimpo,
         codigoPromocionalLiberado: true,
@@ -419,7 +381,6 @@ async function iniciarPagamento(req, res) {
   }
 }
 
-// Etapa 2: confirma o pagamento e só então libera o acesso, gera o recibo e grava no histórico
 async function confirmarPagamento(req, res) {
   try {
     const { codigoRecibo } = req.params;
@@ -427,10 +388,8 @@ async function confirmarPagamento(req, res) {
       codigoRecibo,
       utilizadorId: req.session.utilizador.id,
     });
-
-    if (!compra) {
+    if (!compra)
       return res.status(404).send("Pedido de pagamento não encontrado.");
-    }
 
     const user = await User.findById(req.session.utilizador.id);
     if (!user) return res.redirect("/");
@@ -443,7 +402,6 @@ async function confirmarPagamento(req, res) {
         new Date(user.pagoAte) > agora
           ? new Date(user.pagoAte).getTime()
           : agora.getTime();
-
       const validoAte = new Date(
         baseData + compra.planoDias * 24 * 60 * 60 * 1000,
       );
@@ -491,9 +449,7 @@ async function verRecibo(req, res) {
         (c) => c.codigoRecibo === codigoRecibo,
       ) || (await Compra.findOne({ codigoRecibo, utilizadorId: user._id }));
 
-    if (!compra) {
-      return res.status(404).send("Recibo não encontrado.");
-    }
+    if (!compra) return res.status(404).send("Recibo não encontrado.");
 
     return res.render("recibo", {
       utilizador: user,
@@ -505,23 +461,19 @@ async function verRecibo(req, res) {
   }
 }
 
-// Gera código promocional de convite APENAS se o administrador tiver liberado para esta conta
 async function gerarCodigoConviteUtilizador(req, res) {
   try {
     const user = await User.findById(req.session.utilizador.id);
     if (!user) return res.redirect("/");
 
     if (!user.codigoPromocionalLiberado) {
-      return res
-        .status(403)
-        .send("Código promocional ainda não liberado pelo administrador.");
-    }
-
-    if (!user.codigoPromocional) {
-      user.codigoPromocional = gerarCodigoPromocional(user.nome);
+      user.codigoPromocional = null;
       await user.save();
+      return res.redirect("/player");
     }
 
+    user.codigoPromocional = gerarCodigoPromocional();
+    await user.save();
     return res.redirect("/player");
   } catch (erro) {
     console.error("Erro ao gerar código promocional:", erro);

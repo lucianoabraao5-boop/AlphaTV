@@ -112,14 +112,8 @@ function gerarCodigoVerificacao() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function gerarCodigoPromocional(nome = "USER") {
-  const prefixo = String(nome)
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 4)
-    .padEnd(4, "X");
-  const sufixo = crypto.randomBytes(2).toString("hex").toUpperCase();
-  return `ALPHATV-${prefixo}-${sufixo}`;
+function gerarCodigoPromocional() {
+  return String(Math.floor(1000 + Math.random() * 9000));
 }
 
 function gerarCodigoRecibo() {

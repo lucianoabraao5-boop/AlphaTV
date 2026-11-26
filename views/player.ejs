@@ -64,26 +64,24 @@
 
     <div class="grid-perfil">
       <div class="card">
-        <h3 style="margin-top:0; color:#38bdf8;">Código Promocional para Convidar</h3>
-        <% if (promoLiberado && utilizador.codigoPromocional) { %>
-          <p>O teu código promocional está liberado pelo administrador:</p>
-          <div style="background:#020617; border:1px solid #38bdf8; padding:10px; border-radius:6px; font-weight:bold; color:#38bdf8;">
-            <%= utilizador.codigoPromocional %>
-          </div>
-          <p style="font-size:0.85rem; color:#94a3b8; margin-top:8px;">
-            Convites registados: <strong><%= utilizador.convitesRealizados || 0 %></strong>
-          </p>
-        <% } else if (promoLiberado) { %>
-          <p>O administrador liberou o teu acesso para gerar código promocional de convite:</p>
-          <form action="/convite/gerar" method="POST" style="margin:0;">
-            <button type="submit" class="btn">Gerar Meu Código Promocional</button>
-          </form>
-        <% } else { %>
-          <p style="color:#94a3b8;">
-            A geração de código promocional para convidar outras pessoas só fica disponível quando liberada pelo administrador.
-          </p>
-        <% } %>
-      </div>
+  <h3 style="margin-top:0; color:#38bdf8;">Código Promocional para Convidar</h3>
+  <% if (utilizador && utilizador.codigoPromocionalLiberado && utilizador.codigoPromocional) { %>
+    <p>Código disponibilizado pelo administrador (4 dígitos):</p>
+    <div style="background:#020617; border:1px solid #38bdf8; padding:10px; border-radius:6px; font-weight:bold; font-size:1.25rem; letter-spacing:3px; color:#38bdf8; text-align:center;">
+      <%= utilizador.codigoPromocional %>
+    </div>
+    <p style="font-size:0.85rem; color:#94a3b8; margin-top:8px;">
+      Convites registados: <strong><%= utilizador.convitesRealizados || 0 %></strong>
+    </p>
+    <form action="/convite/gerar" method="POST" style="margin-top:10px;">
+      <button type="submit" class="btn">Gerar Novo Código (4 dígitos)</button>
+    </form>
+  <% } else { %>
+    <p style="color:#94a3b8;">
+      Nenhum código promocional disponível no momento. Fica visível apenas quando disponibilizado pelo administrador.
+    </p>
+  <% } %>
+</div>
 
       <div class="card">
         <h3 style="margin-top:0; color:#38bdf8;">Suporte Técnico (WhatsApp, Telegram e Chat Direto)</h3>

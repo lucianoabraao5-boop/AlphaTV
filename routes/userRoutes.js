@@ -12,31 +12,6 @@ const {
   verificarAdmin,
 } = require("../authMiddlewares/authMiddleware");
 
-// Garante que a conta 'adm' (ou Administrador) esteja sempre liberada com código promocional
-async function garantirPromocionalAdmin(userDoc) {
-  if (!userDoc) return null;
-  const eAdminOuAdm =
-    String(userDoc.role || "").toLowerCase() === "administrador" ||
-    String(userDoc.email || "").toLowerCase() === "adm@adm.pt" ||
-    String(userDoc.nome || "").toLowerCase() === "adm";
-
-  if (eAdminOuAdm) {
-    let alterado = false;
-    if (!userDoc.codigoPromocionalLiberado) {
-      userDoc.codigoPromocionalLiberado = true;
-      alterado = true;
-    }
-    if (!userDoc.codigoPromocional) {
-      userDoc.codigoPromocional = "ALPHATV-ADM-0001";
-      alterado = true;
-    }
-    if (alterado) {
-      await userDoc.save();
-    }
-  }
-  return userDoc;
-}
-
 // Acesso e recuperação por telefone segundo país (PT / BR / OUTROS)
 router.get("/", userController.mostrarPaginaAcesso);
 router.get("/login", userController.mostrarPaginaAcesso);
@@ -75,21 +50,22 @@ router.post(
 // Rota administrativa
 router.get("/admin", verificarAdmin, async (req, res) => {
   try {
-    const utilizadoresBrutos = await User.find().sort({ _id: -1 });
-    const utilizadores = [];
-    for (const u of utilizadoresBrutos) {
-      utilizadores.push(await garantirPromocionalAdmin(u));
+    const utilizadores = await User.find().sort({ _id: -1 });
+    let compras = [];
+    try {
+      compras = await Compra.find().sort({ criadoEm: -1 }).limit(30);
+    } catch (errCompra) {
+      console.error("Aviso ao buscar compras em /admin:", errCompra);
     }
 
-    const compras = await Compra.find().sort({ criadoEm: -1 }).limit(30);
-    res.render("admin", {
+    return res.render("admin", {
       utilizadores,
       compras,
       utilizador: req.session.utilizador,
     });
   } catch (erro) {
     console.error("Erro ao carregar /admin:", erro);
-    res.status(500).send("Erro ao carregar o painel de administração.");
+    return res.status(500).send("Erro ao carregar o painel de administração.");
   }
 });
 
@@ -111,13 +87,10 @@ router.post(
 
       if (telefone && String(telefone).trim() !== "") {
         const check = normalizarTelefonePorPais(paisEscolhido, telefone);
-        if (check.valido) {
-          alvo.pais = check.pais;
-          alvo.telefone = check.telefoneE164;
-        } else {
-          alvo.pais = paisEscolhido;
-          alvo.telefone = String(telefone).trim();
-        }
+        alvo.pais = paisEscolhido;
+        alvo.telefone = check.valido
+          ? check.telefoneE164
+          : String(telefone).trim();
       } else {
         alvo.pais = paisEscolhido;
         alvo.telefone = "";
@@ -189,7 +162,7 @@ router.post(
   },
 );
 
-// Administrador libera ou bloqueia permissão de código promocional (conta 'adm' nunca é bloqueada)
+// Administrador disponibiliza (gera 4 dígitos) ou bloqueia (remove) código promocional
 router.post(
   "/admin/utilizadores/:id/promocional",
   verificarAdmin,
@@ -197,28 +170,19 @@ router.post(
     try {
       const alvo = await User.findById(req.params.id);
       if (alvo) {
-        const eAdmFixo =
-          String(alvo.role || "").toLowerCase() === "administrador" ||
-          String(alvo.email || "").toLowerCase() === "adm@adm.pt" ||
-          String(alvo.nome || "").toLowerCase() === "adm";
-
-        if (eAdmFixo) {
+        const vaiDisponibilizar = !alvo.codigoPromocionalLiberado;
+        if (vaiDisponibilizar) {
           alvo.codigoPromocionalLiberado = true;
-          if (!alvo.codigoPromocional) {
-            alvo.codigoPromocional = "ALPHATV-ADM-0001";
-          }
+          alvo.codigoPromocional = gerarCodigoPromocional();
         } else {
-          const liberar = !alvo.codigoPromocionalLiberado;
-          alvo.codigoPromocionalLiberado = liberar;
-          if (liberar && !alvo.codigoPromocional) {
-            alvo.codigoPromocional = gerarCodigoPromocional(alvo.nome);
-          }
+          alvo.codigoPromocionalLiberado = false;
+          alvo.codigoPromocional = null;
         }
         await alvo.save();
       }
       return res.redirect("/admin");
     } catch (erro) {
-      console.error("Erro ao alterar permissão promocional:", erro);
+      console.error("Erro ao alterar disponibilização do código:", erro);
       return res.redirect("/admin");
     }
   },

@@ -147,40 +147,38 @@
                   <% } %>
                 </td>
                 <td>
-                  <% if (eAdmConta) { %>
-                    <strong style="color:#38bdf8;"><%= u.codigoPromocional || "ALPHATV-ADM-0001" %></strong><br>
-                    <span style="color:#38bdf8; font-size:0.78rem;">Sempre Liberado</span>
-                  <% } else if (u.codigoPromocionalLiberado) { %>
-                    <strong style="color:#38bdf8;"><%= u.codigoPromocional || "Liberado (aguarda geração)" %></strong>
-                  <% } else { %>
-                    <span style="color:#94a3b8;">Bloqueado</span>
-                  <% } %>
-                </td>
-                <td>
-                  <div class="acoes">
-                    <% if (!eAdmConta) { %>
-                      <form action="/admin/utilizadores/<%= u._id %>/renovar-teste" method="POST">
-                        <input type="number" name="dias" value="7" min="1" max="365" class="input-dias" />
-                        <button type="submit" class="btn">Renovar Dias</button>
-                      </form>
-                      <form action="/admin/utilizadores/<%= u._id %>/promocional" method="POST">
-                        <button type="submit" class="btn btn-secundario">
-                          <%= u.codigoPromocionalLiberado ? "Bloquear Convite" : "Liberar Convite" %>
-                        </button>
-                      </form>
-                    <% } %>
-                    <form action="/admin/utilizadores/<%= u._id %>/role" method="POST">
-                      <button type="submit" class="btn btn-secundario">
-                        <%= isAdminRow ? "Tornar Utilizador" : "Tornar Admin" %>
-                      </button>
-                    </form>
-                    <% if (String(u._id) !== String(utilizador.id)) { %>
-                      <form action="/admin/utilizadores/<%= u._id %>/apagar" method="POST" onsubmit="return confirm('Apagar utilizador?');">
-                        <button type="submit" class="btn btn-sair">Apagar</button>
-                      </form>
-                    <% } %>
-                  </div>
-                </td>
+  <% if (u.codigoPromocionalLiberado && u.codigoPromocional) { %>
+    <strong style="color:#38bdf8; font-size:1.05rem; letter-spacing:2px;"><%= u.codigoPromocional %></strong><br>
+    <span style="color:#38bdf8; font-size:0.78rem;">Disponibilizado</span>
+  <% } else { %>
+    <span style="color:#94a3b8;">Não disponibilizado</span>
+  <% } %>
+</td>
+<td>
+  <div class="acoes">
+    <% if (!isAdminRow) { %>
+      <form action="/admin/utilizadores/<%= u._id %>/renovar-teste" method="POST">
+        <input type="number" name="dias" value="7" min="1" max="365" class="input-dias" />
+        <button type="submit" class="btn">Renovar Dias</button>
+      </form>
+    <% } %>
+    <form action="/admin/utilizadores/<%= u._id %>/promocional" method="POST">
+      <button type="submit" class="btn btn-secundario">
+        <%= (u.codigoPromocionalLiberado && u.codigoPromocional) ? "Bloquear Código" : "Disponibilizar Código" %>
+      </button>
+    </form>
+    <form action="/admin/utilizadores/<%= u._id %>/role" method="POST">
+      <button type="submit" class="btn btn-secundario">
+        <%= isAdminRow ? "Tornar Utilizador" : "Tornar Admin" %>
+      </button>
+    </form>
+    <% if (String(u._id) !== String(utilizador.id)) { %>
+      <form action="/admin/utilizadores/<%= u._id %>/apagar" method="POST" onsubmit="return confirm('Apagar utilizador?');">
+        <button type="submit" class="btn btn-sair">Apagar</button>
+      </form>
+    <% } %>
+  </div>
+</td>
               </tr>
             <% }); %>
           </tbody>
