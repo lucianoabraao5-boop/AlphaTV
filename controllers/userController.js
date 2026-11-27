@@ -486,7 +486,6 @@ async function iniciarPagamento(req, res) {
     const codigoRecibo = gerarCodigoRecibo();
     const referenciaPagamento = gerarReferenciaPagamento(metodoPagamento);
 
-    // Recibo NÃO é emitido aqui: fica pendente até confirmação explícita do administrador
     await Compra.create({
       utilizadorId: user._id,
       nomeUtilizador: user.nome,
@@ -513,18 +512,14 @@ async function iniciarPagamento(req, res) {
   }
 }
 
-// Apenas um administrador pode confirmar o pagamento e libertar o recibo
+// Confirmação de recebimento é exclusiva do administrador; o cliente apenas aguarda
 async function confirmarPagamento(req, res) {
   try {
     const sessUser = req.session?.utilizador;
     if (!sessUser || !sessUser.id) return res.redirect("/");
 
     if (!isAdminRole(sessUser.role)) {
-      return res
-        .status(403)
-        .send(
-          "A confirmação de pagamento e geração de recibo só pode ser feita pelo administrador.",
-        );
+      return res.redirect("/subscricao");
     }
 
     const { codigoRecibo } = req.params;
@@ -617,7 +612,7 @@ async function verRecibo(req, res) {
       return res
         .status(403)
         .send(
-          "O recibo só fica disponível após a confirmação do pagamento pelo administrador.",
+          "O recibo só fica disponível após a confirmação do recebimento pelo administrador.",
         );
     }
 

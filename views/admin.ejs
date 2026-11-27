@@ -15,7 +15,6 @@
       font-family: Arial, Helvetica, sans-serif;
     }
 
-    /* === TOPBAR ADMIN === */
     .topbar {
       position: sticky;
       top: 0;
@@ -102,7 +101,6 @@
       font-size: 0.78rem;
     }
 
-    /* === CONTAINER PRINCIPAL === */
     .container {
       max-width: 1380px;
       margin: 18px auto 34px auto;
@@ -147,7 +145,6 @@
       display: none;
     }
 
-    /* === TABELAS === */
     .table-wrap {
       overflow-x: auto;
     }
@@ -197,7 +194,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      min-width: 150px;
+      min-width: 165px;
     }
 
     .estado-confirmado {
@@ -210,17 +207,10 @@
       font-weight: 700;
     }
 
-    /* === COMUNICAÇÃO COM CLIENTE (WHATSAPP / TELEGRAM / CHAT DIRETO) === */
     .comm-grid {
       display: grid;
-      grid-template-columns: minmax(280px, 1fr) minmax(340px, 1.4fr);
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .comm-grid {
-        grid-template-columns: 1fr;
-      }
     }
 
     .comm-box {
@@ -231,6 +221,11 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+    }
+
+    .comm-label {
+      font-size: 0.78rem;
+      color: #94a3b8;
     }
 
     .comm-channels {
@@ -244,8 +239,8 @@
       border: 1px solid #1e293b;
       border-radius: 8px;
       padding: 12px;
-      min-height: 130px;
-      max-height: 220px;
+      min-height: 150px;
+      max-height: 240px;
       overflow-y: auto;
       font-size: 0.85rem;
       display: flex;
@@ -263,6 +258,12 @@
     .msg-admin {
       border-color: #0284c7;
       background: #082f49;
+    }
+
+    .status-salvo {
+      font-size: 0.78rem;
+      color: #38bdf8;
+      min-height: 16px;
     }
   </style>
 </head>
@@ -285,18 +286,17 @@
   </header>
 
   <main class="container">
-    <!-- NAVEGAÇÃO RÁPIDA ENTRE ÁREAS DO ADMIN -->
     <nav class="nav-tabs" aria-label="Secções do administrador">
       <button type="button" class="btn btn-ghost ativo" data-sec="todas" onclick="mostrarSecao('todas', this)">Todas as Secções</button>
       <button type="button" class="btn btn-ghost" data-sec="pagamentos" onclick="mostrarSecao('pagamentos', this)">Pagamentos</button>
-      <button type="button" class="btn btn-ghost" data-sec="utilizadores" onclick="mostrarSecao('utilizadores', this)">Utilizadores</button>
       <button type="button" class="btn btn-ghost" data-sec="comunicacao" onclick="mostrarSecao('comunicacao', this)">WhatsApp / Telegram / Chat</button>
+      <button type="button" class="btn btn-ghost" data-sec="utilizadores" onclick="mostrarSecao('utilizadores', this)">Utilizadores</button>
     </nav>
 
-    <!-- 1. PAGAMENTOS E CONFIRMAÇÃO DE ACESSO -->
+    <!-- 1. PAGAMENTOS E CONFIRMAÇÃO DE RECEBIMENTO PELO ADMIN -->
     <section id="sec-pagamentos" class="card">
       <div class="card-header">
-        <h2 class="card-title">Pagamentos e Confirmação de Acesso</h2>
+        <h2 class="card-title">Pagamentos e Confirmação de Recebimento</h2>
       </div>
 
       <div class="table-wrap">
@@ -319,7 +319,7 @@
               </tr>
             <% } else { %>
               <% comprasSafe.forEach(function(compra) {
-                const confirmado = String(compra.status || "").toLowerCase() === "confirmado" && compra.confirmadoPorAdmin !== false;
+                const confirmadoAdmin = String(compra.status || "").toLowerCase() === "confirmado" && compra.confirmadoPorAdmin === true;
               %>
                 <tr>
                   <td><strong><%= compra.codigoRecibo || "-" %></strong></td>
@@ -333,21 +333,25 @@
                   <td><%= compra.metodoPagamento || "-" %></td>
                   <td><%= Number(compra.valorFinal ?? compra.valorBase ?? 0).toFixed(2) %> <%= compra.moeda || "EUR" %></td>
                   <td>
-                    <% if (confirmado) { %>
-                      <span class="estado-confirmado">Confirmado</span>
+                    <% if (confirmadoAdmin) { %>
+                      <span class="estado-confirmado">Confirmado pelo Admin</span>
                     <% } else { %>
                       <span class="estado-pendente">Pendente</span>
                     <% } %>
                   </td>
                   <td>
                     <div class="acoes-stack">
-                      <% if (!confirmado && compra.codigoRecibo) { %>
+                      <% if (!confirmadoAdmin && compra.codigoRecibo) { %>
                         <form action="/admin/confirmar-pagamento/<%= encodeURIComponent(compra.codigoRecibo) %>" method="POST" style="margin:0;">
-                          <button type="submit" class="btn btn-sm" style="width:100%; justify-content:center;">Confirmar Pagamento</button>
+                          <button type="submit" class="btn btn-sm" style="width:100%; justify-content:center;">
+                            Confirmar Recebimento
+                          </button>
                         </form>
                       <% } %>
-                      <% if (confirmado && compra.codigoRecibo) { %>
-                        <a href="/recibo/<%= encodeURIComponent(compra.codigoRecibo) %>" class="btn btn-ghost btn-sm" style="justify-content:center;">Ver Recibo</a>
+                      <% if (confirmadoAdmin && compra.codigoRecibo) { %>
+                        <a href="/recibo/<%= encodeURIComponent(compra.codigoRecibo) %>" class="btn btn-ghost btn-sm" style="justify-content:center;">
+                          Ver Recibo
+                        </a>
                       <% } %>
                     </div>
                   </td>
@@ -359,18 +363,32 @@
       </div>
     </section>
 
-    <!-- 2. COMUNICAÇÃO COM O CLIENTE (WHATSAPP, TELEGRAM E CHAT DIRETO) -->
+    <!-- 2. COMUNICAÇÃO COM CLIENTE + NÚMERO/CONTACTO DO ADMIN -->
     <section id="sec-comunicacao" class="card">
       <div class="card-header">
         <h2 class="card-title">Comunicação com o Cliente • WhatsApp, Telegram e Chat Direto</h2>
       </div>
 
       <div class="comm-grid">
-        <!-- CANAIS EXTERNOS: WHATSAPP & TELEGRAM -->
+        <!-- CONTACTO DO ADMIN PARA WHATSAPP / TELEGRAM -->
         <div class="comm-box">
-          <strong style="color:#38bdf8; font-size:0.92rem;">Canais Externos (WhatsApp / Telegram)</strong>
+          <strong style="color:#38bdf8; font-size:0.92rem;">Meu Número / Contacto do Admin (WhatsApp & Telegram)</strong>
+          <div class="comm-label">Informe o seu número com indicativo (ex: +351912345678) e utilizador/link do Telegram para interação:</div>
 
-          <label for="commClienteSelect" style="font-size:0.8rem; color:#94a3b8;">Selecionar cliente</label>
+          <input id="adminWhatsappNumero" type="text" placeholder="Seu número WhatsApp (ex: +351912345678)" />
+          <input id="adminTelegramContacto" type="text" placeholder="Seu Telegram (ex: @admin ou https://t.me/admin)" />
+
+          <div class="comm-channels">
+            <button type="button" class="btn btn-sm" onclick="salvarContatoAdmin()">Salvar Meu Contacto</button>
+          </div>
+          <div id="statusContatoAdmin" class="status-salvo"></div>
+        </div>
+
+        <!-- CANAIS EXTERNOS PARA FALAR COM O CLIENTE -->
+        <div class="comm-box">
+          <strong style="color:#38bdf8; font-size:0.92rem;">Interagir com Cliente (WhatsApp / Telegram)</strong>
+
+          <label for="commClienteSelect" class="comm-label">Selecionar cliente</label>
           <select id="commClienteSelect" onchange="sincronizarClienteComm()">
             <option value="">-- Escolher cliente da lista --</option>
             <% utilizadoresSafe.forEach(function(u) { %>
@@ -385,33 +403,33 @@
             <% }); %>
           </select>
 
-          <input id="commTelefoneManual" type="text" placeholder="Telefone WhatsApp (ex: +351912345678)" />
-          <input id="commTelegramUser" type="text" placeholder="Utilizador ou link Telegram (ex: @cliente ou https://t.me/...)" />
-          <input id="commMensagemRapida" type="text" placeholder="Mensagem padrão (ex: Olá, o seu acesso AlphaTV está ativo!)" />
+          <input id="commTelefoneCliente" type="text" placeholder="Telefone do cliente WhatsApp (ex: +351912345678)" />
+          <input id="commTelegramCliente" type="text" placeholder="Utilizador/link Telegram (ex: @cliente ou https://t.me/...)" />
+          <input id="commMensagemRapida" type="text" placeholder="Mensagem (ex: Olá, o seu recebimento foi confirmado no AlphaTV!)" />
 
           <div class="comm-channels">
-            <button type="button" class="btn btn-sm" onclick="abrirWhatsAppCliente()">Abrir WhatsApp</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="abrirTelegramCliente()">Abrir Telegram</button>
+            <button type="button" class="btn btn-sm" onclick="abrirWhatsApp()">WhatsApp</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="abrirTelegram()">Telegram</button>
           </div>
         </div>
 
-        <!-- CHAT DIRETO COM O CLIENTE -->
+        <!-- CHAT DIRETO EM TEMPO REAL COM O CLIENTE -->
         <div class="comm-box">
-          <strong style="color:#38bdf8; font-size:0.92rem;">Chat Direto com o Cliente</strong>
+          <strong style="color:#38bdf8; font-size:0.92rem;">Chat Direto em Tempo Real</strong>
           <div id="chatClienteLog" class="chat-box">
             <div class="msg-item">
-              <strong style="color:#38bdf8;">Sistema:</strong> Selecione um cliente e envie uma mensagem direta de suporte ou confirmação.
+              <strong style="color:#38bdf8;">Sistema:</strong> A aguardar mensagens do suporte técnico...
             </div>
           </div>
           <form class="inline-form" onsubmit="enviarChatAdmin(event)" style="width:100%;">
-            <input id="chatAdminInput" type="text" placeholder="Escrever resposta direta para o cliente..." style="flex:1;" required />
-            <button type="submit" class="btn btn-sm">Enviar no Chat</button>
+            <input id="chatAdminInput" type="text" placeholder="Responder ao cliente em tempo real..." style="flex:1;" required />
+            <button type="submit" class="btn btn-sm">Enviar</button>
           </form>
         </div>
       </div>
     </section>
 
-    <!-- 3. UTILIZADORES, PAÍS/TELEFONE, DIAS GRATUITOS E CÓDIGO PROMOCIONAL -->
+    <!-- 3. UTILIZADORES -->
     <section id="sec-utilizadores" class="card">
       <div class="card-header">
         <h2 class="card-title">Utilizadores, País/Telefone, Dias Gratuitos e Código Promocional</h2>
@@ -500,6 +518,14 @@
   </main>
 
   <script>
+    function escaparHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
     function mostrarSecao(secao, btnClicado) {
       const pag = document.getElementById("sec-pagamentos");
       const comm = document.getElementById("sec-comunicacao");
@@ -513,27 +539,143 @@
       if (btnClicado) btnClicado.classList.add("ativo");
     }
 
+    async function salvarContatoAdmin() {
+      const whatsapp = (document.getElementById("adminWhatsappNumero")?.value || "").trim();
+      const telegram = (document.getElementById("adminTelegramContacto")?.value || "").trim();
+      const statusEl = document.getElementById("statusContatoAdmin");
+
+      try {
+        localStorage.setItem("alphatv_admin_whatsapp", whatsapp);
+        localStorage.setItem("alphatv_admin_telegram", telegram);
+      } catch (e) {}
+
+      try {
+        await fetch("/api/admin/contato-suporte", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ whatsapp, telegram }),
+        });
+      } catch (e) {}
+
+      if (statusEl) {
+        statusEl.textContent = "Contacto do admin guardado com sucesso.";
+      }
+    }
+
+    function carregarContatoAdminSalvo() {
+      try {
+        const wa = localStorage.getItem("alphatv_admin_whatsapp") || "";
+        const tg = localStorage.getItem("alphatv_admin_telegram") || "";
+        const waInput = document.getElementById("adminWhatsappNumero");
+        const tgInput = document.getElementById("adminTelegramContacto");
+        if (waInput && wa) waInput.value = wa;
+        if (tgInput && tg) tgInput.value = tg;
+      } catch (e) {}
+    }
+
     function sincronizarClienteComm() {
       const sel = document.getElementById("commClienteSelect");
       if (!sel) return;
       const opt = sel.options[sel.selectedIndex];
-      const telInput = document.getElementById("commTelefoneManual");
+      const telInput = document.getElementById("commTelefoneCliente");
       if (opt && telInput && opt.dataset.telefone) {
         telInput.value = opt.dataset.telefone;
       }
+      sincronizarMensagensTempoReal();
     }
 
-    function abrirWhatsAppCliente() {
-      const telRaw = (document.getElementById("commTelefoneManual")?.value || "").replace(/\D/g, "");
+    function abrirWhatsApp() {
+      const telCliente = (document.getElementById("commTelefoneCliente")?.value || "").replace(/\D/g, "");
+      const telAdmin = (document.getElementById("adminWhatsappNumero")?.value || "").replace(/\D/g, "");
+      const alvo = telCliente || telAdmin;
       const msg = (document.getElementById("commMensagemRapida")?.value || "Olá, suporte AlphaTV.").trim();
-      if (!telRaw) {
-        alert("Informe ou selecione um número de telefone válido para o WhatsApp.");
+
+      if (!alvo) {
+        alert("Preencha o seu número do Admin ou selecione um número de cliente.");
         return;
       }
-      const url = "https://wa.me/" + telRaw + "?text=" + encodeURIComponent(msg);
+      window.open("https://wa.me/" + alvo + "?text=" + encodeURIComponent(msg), "_blank", "noopener");
+    }
+
+    function abrirTelegram() {
+      const tgCliente = (document.getElementById("commTelegramCliente")?.value || "").trim();
+      const tgAdmin = (document.getElementById("adminTelegramContacto")?.value || "").trim();
+      const alvo = tgCliente || tgAdmin;
+      const msg = (document.getElementById("commMensagemRapida")?.value || "Olá, suporte AlphaTV.").trim();
+
+      if (alvo.startsWith("http://") || alvo.startsWith("https://")) {
+        window.open(alvo, "_blank", "noopener");
+        return;
+      }
+
+      const username = alvo.replace(/^@/, "");
+      const url = username
+        ? "https://t.me/" + encodeURIComponent(username)
+        : "https://t.me/share/url?url=" + encodeURIComponent("https://alphatv-wg41.onrender.com") + "&text=" + encodeURIComponent(msg);
       window.open(url, "_blank", "noopener");
     }
 
-    function abrirTelegramCliente() {
-      const tgRaw = (document.getElementById("commTelegramUser")?.value || "").trim();
-      const msg = (document.getElementById("commMensagemRapida")?.value || "Olá, suporte AlphaTV.").trim();
+    async function sincronizarMensagensTempoReal() {
+      const log = document.getElementById("chatClienteLog");
+      const sel = document.getElementById("commClienteSelect");
+      if (!log) return;
+
+      const emailFiltro = sel && sel.selectedIndex > 0 ? (sel.options[sel.selectedIndex].dataset.email || "") : "";
+      const qs = emailFiltro ? "?clienteEmail=" + encodeURIComponent(emailFiltro) : "";
+
+      try {
+        const resp = await fetch("/api/suporte/mensagens" + qs);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const lista = Array.isArray(data.mensagens) ? data.mensagens : [];
+
+        if (lista.length === 0) {
+          log.innerHTML = '<div class="msg-item"><strong style="color:#38bdf8;">Chat:</strong> Nenhuma mensagem recebida ainda.</div>';
+          return;
+        }
+
+        log.innerHTML = lista.map((m) => {
+          const isAdminMsg = m.remetente === "admin";
+          const prefixo = isAdminMsg
+            ? "Admin → " + escaparHtml(m.clienteNome || m.clienteEmail || "Cliente")
+            : escaparHtml(m.autorNome || "Cliente") + " (" + escaparHtml(m.clienteEmail || "") + ")";
+          return '<div class="msg-item ' + (isAdminMsg ? "msg-admin" : "") + '">' +
+            '<strong>' + prefixo + ':</strong> ' + escaparHtml(m.texto) +
+            '</div>';
+        }).join("");
+        log.scrollTop = log.scrollHeight;
+      } catch (e) {}
+    }
+
+    async function enviarChatAdmin(event) {
+      event.preventDefault();
+      const input = document.getElementById("chatAdminInput");
+      const sel = document.getElementById("commClienteSelect");
+      if (!input) return;
+
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      const opt = sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex] : null;
+      const clienteEmail = opt ? (opt.dataset.email || "geral@alphatv") : "geral@alphatv";
+      const clienteNome = opt ? (opt.dataset.nome || opt.textContent.trim()) : "Cliente";
+
+      try {
+        await fetch("/api/suporte/mensagens", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texto, clienteEmail, clienteNome }),
+        });
+        input.value = "";
+        await sincronizarMensagensTempoReal();
+      } catch (e) {}
+    }
+
+    window.addEventListener("DOMContentLoaded", function () {
+      carregarContatoAdminSalvo();
+      sincronizarMensagensTempoReal();
+      setInterval(sincronizarMensagensTempoReal, 2000);
+    });
+  </script>
+</body>
+</html>

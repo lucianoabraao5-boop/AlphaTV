@@ -653,29 +653,66 @@
       if (drawer) drawer.classList.remove("visivel");
     }
 
-    function enviarMensagemSuporte(event) {
+    async function sincronizarSuporteCliente() {
+      const log = document.getElementById("chatLog");
+      if (!log) return;
+
+      try {
+        const resp = await fetch("/api/suporte/mensagens");
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        if (data.contatoAdmin) {
+          const waBtn = document.querySelector('a[href^="https://wa.me/"]');
+          const tgBtn = document.querySelector('a[href^="https://t.me/"]');
+          const waLimpo = String(data.contatoAdmin.whatsapp || "").replace(/\D/g, "");
+          const tgRaw = String(data.contatoAdmin.telegram || "").trim();
+
+          if (waBtn && waLimpo) {
+            waBtn.href = "https://wa.me/" + waLimpo;
+          }
+          if (tgBtn && tgRaw) {
+            tgBtn.href = tgRaw.startsWith("http") ? tgRaw : "https://t.me/" + tgRaw.replace(/^@/, "");
+          }
+        }
+
+        const msgs = Array.isArray(data.mensagens) ? data.mensagens : [];
+        if (msgs.length === 0) return;
+
+        log.innerHTML = msgs.map((m) => {
+          const autor = m.remetente === "admin" ? "Suporte AlphaTV" : "Tu";
+          const safeTexto = String(m.texto || "").replace(/</g, "&lt;");
+          return '<div style="margin-top:4px;"><strong style="color:#38bdf8;">' + autor + ':</strong> ' + safeTexto + '</div>';
+        }).join("");
+        log.scrollTop = log.scrollHeight;
+      } catch (e) {}
+    }
+
+    async function enviarMensagemSuporte(event) {
       event.preventDefault();
       const input = document.getElementById("chatInput");
-      const log = document.getElementById("chatLog");
-      if (!input || !log) return;
+      if (!input) return;
 
       const texto = input.value.trim();
       if (!texto) return;
 
-      const userDiv = document.createElement("div");
-      userDiv.style.marginTop = "6px";
-      userDiv.innerHTML = '<strong style="color:#38bdf8;">Tu:</strong> ' + texto.replace(/</g, "&lt;");
-      log.appendChild(userDiv);
-
-      const respDiv = document.createElement("div");
-      respDiv.style.marginTop = "4px";
-      respDiv.style.color = "#94a3b8";
-      respDiv.textContent = "Suporte AlphaTV: Mensagem recebida. Se precisar de ajuda imediata, utilize WhatsApp ou Telegram.";
-      log.appendChild(respDiv);
-
-      log.scrollTop = log.scrollHeight;
-      input.value = "";
+      try {
+        const resp = await fetch("/api/suporte/mensagens", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texto }),
+        });
+        if (resp.ok) {
+          input.value = "";
+          await sincronizarSuporteCliente();
+        }
+      } catch (e) {}
     }
+
+    window.addEventListener("DOMContentLoaded", function () {
+      sincronizarSuporteCliente();
+      setInterval(sincronizarSuporteCliente, 2000);
+    });
 
     function filtrarCanais() {
       const termo = (document.getElementById("filtroCanal")?.value || "").toLowerCase().trim();
