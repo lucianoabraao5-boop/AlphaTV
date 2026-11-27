@@ -480,6 +480,10 @@ async function iniciarPagamento(req, res) {
       moedaPreferida,
       taxaCambioOntem,
       dataCambioOntem,
+      cartaoNumero,
+      cartaoNome,
+      cartaoValidade,
+      cartaoCvv,
     } = req.body;
 
     const plano = obterPlano(planoDias, cfg.precosPlanos);
@@ -487,7 +491,20 @@ async function iniciarPagamento(req, res) {
 
     const metodoObj = (cfg.metodosPagamento || []).find((m) => m.id === metodoPagamento);
     const nomeMetodo = metodoObj ? metodoObj.nome : String(metodoPagamento || "Pagamento");
+    const tipoMetodo = (metodoObj && metodoObj.tipo) || String(metodoPagamento || "").toLowerCase();
     const entidadeMetodo = (metodoObj && metodoObj.entidade) || cfg.entidade || "21478";
+    const chavePixMetodo = (metodoObj && metodoObj.chavePix) || "";
+    const mbwayMetodo = (metodoObj && metodoObj.numeroMbway) || "";
+    const ibanMetodo = (metodoObj && metodoObj.iban) || "";
+
+    if (tipoMetodo.includes("cartao")) {
+      const numLimpo = String(cartaoNumero || "").replace(/\D/g, "");
+      if (numLimpo.length < 12 || !String(cartaoNome || "").trim() || !String(cartaoValidade || "").trim() || String(cartaoCvv || "").replace(/\D/g, "").length < 3) {
+        return res.redirect(
+          "/subscricao?erro=" + encodeURIComponent("Preencha todos os dados do cartão (número, nome, validade e CVV)."),
+        );
+      }
+    }
 
     const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
@@ -517,7 +534,9 @@ async function iniciarPagamento(req, res) {
     const valorConvertido = Number((valorFinal * taxaNum).toFixed(2));
 
     const codigoRecibo = gerarCodigoRecibo();
-    const referenciaPagamento = gerarReferenciaPagamento(metodoPagamento, cfg.referenciaBase);
+    const referenciaPagamento = gerarReferenciaPagamento(tipoMetodo, cfg.referenciaBase);
+
+    const cartaoFinal4 = String(cartaoNumero || "").replace(/\D/g, "").slice(-4);
 
     await Compra.create({
       utilizadorId: user._id,
@@ -537,6 +556,12 @@ async function iniciarPagamento(req, res) {
       metodoPagamento: nomeMetodo,
       entidadePagamento: entidadeMetodo,
       referenciaPagamento,
+      chavePix: chavePixMetodo,
+      numeroMbway: mbwayMetodo,
+      iban: ibanMetodo,
+      cartaoResumo: cartaoFinal4
+        ? `${String(cartaoNome || "").trim()} •••• ${cartaoFinal4} (${String(cartaoValidade || "").trim()})`
+        : "",
       codigoPromocionalUsado: codigoAplicado,
       status: "pendente",
       confirmadoPorAdmin: false,
@@ -559,8 +584,8 @@ async function confirmarPagamento(req, res) {
       return res.redirect("/subscricao");
     }
 
-    const { codigoRecibo } = req.params;
-    const compra = await Compra.findOne({ codigoRecibo });
+    const codigo = decodeURIComponent(String(req.params.codigoRecibo || "")).trim();
+    const compra = await Compra.findOne({ codigoRecibo: codigo });
     if (!compra) return res.redirect("/admin");
 
     const user = await User.findById(compra.utilizadorId);
@@ -577,7 +602,7 @@ async function confirmarPagamento(req, res) {
       baseData + compra.planoDias * 24 * 60 * 60 * 1000,
     );
 
-    await Compra.updateOne(
+    await Compra.findOneAndUpdate(
       { _id: compra._id },
       {
         $set: {
@@ -588,6 +613,7 @@ async function confirmarPagamento(req, res) {
           validoAte,
         },
       },
+      { new: true },
     );
 
     user.statusSubscricao = "ativo";
@@ -604,6 +630,9 @@ async function confirmarPagamento(req, res) {
       metodoPagamento: compra.metodoPagamento,
       entidadePagamento: compra.entidadePagamento || "21478",
       referenciaPagamento: compra.referenciaPagamento,
+      chavePix: compra.chavePix || "",
+      numeroMbway: compra.numeroMbway || "",
+      iban: compra.iban || "",
       codigoPromocionalUsado: compra.codigoPromocionalUsado,
       status: "confirmado",
       confirmadoPorAdmin: true,
@@ -633,8 +662,8 @@ async function verRecibo(req, res) {
     const sessUser = req.session?.utilizador;
     if (!sessUser || !sessUser.id) return res.redirect("/");
 
-    const { codigoRecibo } = req.params;
-    const compraDb = await Compra.findOne({ codigoRecibo });
+    const codigo = decodeURIComponent(String(req.params.codigoRecibo || "")).trim();
+    const compraDb = await Compra.findOne({ codigoRecibo: codigo });
     const donoOuAdmin =
       compraDb &&
       (String(compraDb.utilizadorId) === String(sessUser.id) ||

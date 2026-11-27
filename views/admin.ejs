@@ -73,7 +73,6 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: background-color 0.15s ease;
     }
 
     .btn:hover { background: #0ea5e9; }
@@ -126,7 +125,6 @@
       border: 1px solid #1e293b;
       border-radius: 10px;
       padding: 18px;
-      box-shadow: 0 0 24px rgba(2, 132, 199, 0.1);
     }
 
     .card-header {
@@ -146,13 +144,9 @@
       font-size: 1.08rem;
     }
 
-    .secao-oculta {
-      display: none;
-    }
+    .secao-oculta { display: none; }
 
-    .table-wrap {
-      overflow-x: auto;
-    }
+    .table-wrap { overflow-x: auto; }
 
     table {
       width: 100%;
@@ -171,7 +165,6 @@
       color: #94a3b8;
       font-size: 0.76rem;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
     }
 
     input, select {
@@ -303,7 +296,7 @@
     <nav class="nav-tabs" aria-label="Secções do administrador">
       <button type="button" class="btn btn-ghost ativo" data-sec="todas" onclick="mostrarSecao('todas', this)">Todas as Secções</button>
       <button type="button" class="btn btn-ghost" data-sec="pagamentos" onclick="mostrarSecao('pagamentos', this)">Pagamentos</button>
-      <button type="button" class="btn btn-ghost" data-sec="planos" onclick="mostrarSecao('planos', this)">Planos & Métodos</button>
+      <button type="button" class="btn btn-ghost" data-sec="planos" onclick="mostrarSecao('planos', this)">Planos & Meios de Recebimento</button>
       <button type="button" class="btn btn-ghost" data-sec="comunicacao" onclick="mostrarSecao('comunicacao', this)">WhatsApp / Telegram / Chat</button>
       <button type="button" class="btn btn-ghost" data-sec="utilizadores" onclick="mostrarSecao('utilizadores', this)">Utilizadores</button>
     </nav>
@@ -321,7 +314,7 @@
               <th>Recibo</th>
               <th>Utilizador</th>
               <th>Plano</th>
-              <th>Método / Entidade / Ref</th>
+              <th>Método / Dados</th>
               <th>Valor</th>
               <th>Estado</th>
               <th>Ação</th>
@@ -346,10 +339,22 @@
                   </td>
                   <td><%= compra.nomePlano || (compra.planoDias ? compra.planoDias + " dias" : "-") %></td>
                   <td>
-                    <div><%= compra.metodoPagamento || "-" %></div>
+                    <div><strong><%= compra.metodoPagamento || "-" %></strong></div>
                     <div style="font-size:0.78rem; color:#94a3b8;">
                       Ent: <%= compra.entidadePagamento || cfg.entidade || "21478" %> • Ref: <%= compra.referenciaPagamento || "-" %>
                     </div>
+                    <% if (compra.chavePix) { %>
+                      <div style="font-size:0.76rem; color:#38bdf8;">PIX: <%= compra.chavePix %></div>
+                    <% } %>
+                    <% if (compra.numeroMbway) { %>
+                      <div style="font-size:0.76rem; color:#38bdf8;">MB WAY: <%= compra.numeroMbway %></div>
+                    <% } %>
+                    <% if (compra.iban) { %>
+                      <div style="font-size:0.76rem; color:#38bdf8;">IBAN: <%= compra.iban %></div>
+                    <% } %>
+                    <% if (compra.cartaoResumo) { %>
+                      <div style="font-size:0.76rem; color:#38bdf8;">Cartão: <%= compra.cartaoResumo %></div>
+                    <% } %>
                   </td>
                   <td>
                     <div><%= Number(compra.valorFinal ?? compra.valorBase ?? 0).toFixed(2) %> EUR</div>
@@ -395,10 +400,10 @@
       </div>
     </section>
 
-    <!-- 2. PREÇOS DOS PLANOS (30, 60, 90, 180, 270, 360 DIAS) & MÉTODOS DE PAGAMENTO -->
+    <!-- 2. PLANOS & MEIOS DE RECEBIMENTO (CHAVE PIX, MB WAY, IBAN, ENTIDADE) -->
     <section id="sec-planos" class="card">
       <div class="card-header">
-        <h2 class="card-title">Planos (30, 60, 90, 180, 270, 360 Dias) • Entidade & Métodos de Pagamento</h2>
+        <h2 class="card-title">Planos (30, 60, 90, 180, 270, 360 Dias) • Entidade & Meios de Recebimento</h2>
       </div>
 
       <form action="/admin/precos-planos" method="POST" class="grid-3" style="margin-bottom:18px;">
@@ -428,9 +433,8 @@
         </div>
       </form>
 
-      <!-- CADASTRO E EDIÇÃO DOS MÉTODOS DE PAGAMENTO -->
       <div class="comm-box">
-        <strong style="color:#38bdf8; font-size:0.95rem;">Métodos de Pagamento (Gerar / Cadastrar / Editar Entidade e Conta)</strong>
+        <strong style="color:#38bdf8; font-size:0.95rem;">Meios de Recebimento Disponibilizados ao Cliente (PIX, MB WAY, IBAN, Cartão)</strong>
 
         <form action="/admin/metodos-pagamento" method="POST">
           <input type="hidden" name="acao" value="salvar" />
@@ -438,11 +442,13 @@
             <table>
               <thead>
                 <tr>
-                  <th>Ativo</th>
+                  <th>Disponível</th>
                   <th>Método</th>
+                  <th>Tipo</th>
                   <th>Entidade</th>
-                  <th>Conta / IBAN / Chave</th>
-                  <th>Descrição</th>
+                  <th>Chave PIX</th>
+                  <th>Nº MB WAY</th>
+                  <th>IBAN</th>
                   <th>Remover</th>
                 </tr>
               </thead>
@@ -453,16 +459,27 @@
                       <input type="checkbox" name="ativo_<%= m.id %>" <%= m.ativo !== false ? "checked" : "" %> />
                     </td>
                     <td>
-                      <input type="text" name="nome_<%= m.id %>" value="<%= m.nome %>" style="width:160px;" />
+                      <input type="text" name="nome_<%= m.id %>" value="<%= m.nome %>" style="width:155px;" />
                     </td>
                     <td>
-                      <input type="text" name="entidade_<%= m.id %>" value="<%= m.entidade || cfg.entidade || '21478' %>" style="width:110px;" />
+                      <select name="tipo_<%= m.id %>">
+                        <option value="pix" <%= (m.tipo || m.id) === "pix" ? "selected" : "" %>>PIX</option>
+                        <option value="mbway" <%= (m.tipo || m.id) === "mbway" ? "selected" : "" %>>MB WAY</option>
+                        <option value="transferencia" <%= (m.tipo || m.id) === "transferencia" ? "selected" : "" %>>Transferência (IBAN)</option>
+                        <option value="cartao" <%= (m.tipo || m.id) === "cartao" ? "selected" : "" %>>Cartão</option>
+                      </select>
                     </td>
                     <td>
-                      <input type="text" name="conta_<%= m.id %>" value="<%= m.contaDestino || '' %>" placeholder="IBAN / Tel / Email" style="width:190px;" />
+                      <input type="text" name="entidade_<%= m.id %>" value="<%= m.entidade || cfg.entidade || '21478' %>" style="width:95px;" />
                     </td>
                     <td>
-                      <input type="text" name="detalhe_<%= m.id %>" value="<%= m.detalhe || '' %>" style="width:200px;" />
+                      <input type="text" name="chavePix_<%= m.id %>" value="<%= m.chavePix || '' %>" placeholder="Chave PIX" style="width:150px;" />
+                    </td>
+                    <td>
+                      <input type="text" name="mbway_<%= m.id %>" value="<%= m.numeroMbway || '' %>" placeholder="Ex: 912345678" style="width:125px;" />
+                    </td>
+                    <td>
+                      <input type="text" name="iban_<%= m.id %>" value="<%= m.iban || '' %>" placeholder="PT50..." style="width:185px;" />
                     </td>
                     <td>
                       <button type="submit" name="acao" value="remover_<%= m.id %>" class="btn btn-danger btn-sm">Apagar</button>
@@ -473,16 +490,23 @@
             </table>
           </div>
           <div style="margin-top:10px;">
-            <button type="submit" class="btn btn-sm">Guardar Alterações nos Métodos</button>
+            <button type="submit" class="btn btn-sm">Guardar e Disponibilizar Meios</button>
           </div>
         </form>
 
         <form action="/admin/metodos-pagamento" method="POST" class="inline-form" style="margin-top:12px; padding-top:12px; border-top:1px solid #1e293b;">
           <input type="hidden" name="acao" value="novo" />
-          <input type="text" name="novoNome" placeholder="Novo método (ex: Revolut / Stripe)" required />
-          <input type="text" name="novaEntidade" value="<%= cfg.entidade || '21478' %>" placeholder="Entidade" style="width:110px;" />
-          <input type="text" name="novaConta" placeholder="Conta / IBAN / Chave" />
-          <input type="text" name="novoDetalhe" placeholder="Instrução curta" />
+          <input type="text" name="novoNome" placeholder="Nome do método" required />
+          <select name="novoTipo">
+            <option value="pix">PIX</option>
+            <option value="mbway">MB WAY</option>
+            <option value="transferencia">Transferência (IBAN)</option>
+            <option value="cartao">Cartão</option>
+          </select>
+          <input type="text" name="novaEntidade" value="<%= cfg.entidade || '21478' %>" placeholder="Entidade" style="width:95px;" />
+          <input type="text" name="novaChavePix" placeholder="Chave PIX" style="width:140px;" />
+          <input type="text" name="novoMbway" placeholder="Nº MB WAY" style="width:120px;" />
+          <input type="text" name="novoIban" placeholder="IBAN" style="width:165px;" />
           <button type="submit" class="btn btn-sm">+ Cadastrar Método</button>
         </form>
       </div>

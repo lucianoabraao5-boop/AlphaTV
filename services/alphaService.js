@@ -9,13 +9,51 @@ const PLANOS_SUBSCRICAO = {
   360: { dias: 360, nome: "Plano 360 Dias", valorBase: 79.99, moeda: "EUR" },
 };
 
-const METODOS_PAGAMENTO = [
-  { id: "mbway", nome: "MB WAY", entidade: "21478", detalhe: "Pagamento móvel imediato" },
-  { id: "multibanco", nome: "Referência Multibanco", entidade: "21478", detalhe: "Pagamento por Entidade e Referência" },
-  { id: "transferencia", nome: "Transferência Bancária / IBAN", entidade: "21478", detalhe: "SEPA / Transferência direta" },
-  { id: "wise", nome: "Wise Multimoeda", entidade: "21478", detalhe: "EUR, USD, BRL, GBP, CHF e mais" },
-  { id: "pix", nome: "PIX (Brasil)", entidade: "21478", detalhe: "Transferência instantânea BRL" },
-  { id: "paypal", nome: "PayPal", entidade: "21478", detalhe: "Pagamento internacional" },
+const METODOS_PAGAMENTO_PADRAO = [
+  {
+    id: "pix",
+    tipo: "pix",
+    nome: "PIX",
+    entidade: "21478",
+    chavePix: "",
+    numeroMbway: "",
+    iban: "",
+    detalhe: "Chave PIX configurada pelo administrador",
+    ativo: true,
+  },
+  {
+    id: "mbway",
+    tipo: "mbway",
+    nome: "MB WAY",
+    entidade: "21478",
+    chavePix: "",
+    numeroMbway: "",
+    iban: "",
+    detalhe: "Entidade, referência e número MB WAY",
+    ativo: true,
+  },
+  {
+    id: "transferencia",
+    tipo: "transferencia",
+    nome: "Transferência Bancária",
+    entidade: "21478",
+    chavePix: "",
+    numeroMbway: "",
+    iban: "",
+    detalhe: "Transferência bancária via IBAN",
+    ativo: true,
+  },
+  {
+    id: "cartao",
+    tipo: "cartao",
+    nome: "Cartão de Crédito / Débito",
+    entidade: "21478",
+    chavePix: "",
+    numeroMbway: "",
+    iban: "",
+    detalhe: "Cadastro completo dos dados do cartão",
+    ativo: true,
+  },
 ];
 
 const MOEDAS_WISE = [
@@ -94,31 +132,23 @@ function gerarCodigoRecibo() {
   return `ATVR-${num}-${rand}`;
 }
 
-function gerarReferenciaPagamento(metodoId = "multibanco", prefixo = "900") {
+function gerarReferenciaPagamento(tipoOuMetodo = "mbway", prefixo = "900") {
   const prefLimpo = String(prefixo || "900").replace(/\D/g, "").slice(0, 3).padEnd(3, "0");
   const bloco1 = String(Math.floor(100 + Math.random() * 900));
   const bloco2 = String(Math.floor(100 + Math.random() * 900));
-  const ref9Digitos = `${prefLimpo}${bloco1}${bloco2}`;
+  const ref9 = `${prefLimpo}${bloco1}${bloco2}`;
 
-  const idNorm = String(metodoId || "").toLowerCase();
-  if (idNorm.includes("mbway")) {
-    return `MBW-${ref9Digitos}`;
-  }
-  if (idNorm.includes("wise")) {
-    return `WISE-${ref9Digitos}`;
-  }
-  if (idNorm.includes("pix")) {
-    return `PIX-${ref9Digitos}`;
-  }
-  if (idNorm.includes("paypal")) {
-    return `PPL-${ref9Digitos}`;
-  }
+  const norm = String(tipoOuMetodo || "").toLowerCase();
+  if (norm.includes("mbway")) return `MBW-${ref9}`;
+  if (norm.includes("pix")) return `PIX-${ref9}`;
+  if (norm.includes("cartao") || norm.includes("cartão")) return `CRD-${ref9}`;
+  if (norm.includes("transfer")) return `TRF-${ref9}`;
   return `${prefLimpo} ${bloco1} ${bloco2}`;
 }
 
 module.exports = {
   PLANOS_SUBSCRICAO,
-  METODOS_PAGAMENTO,
+  METODOS_PAGAMENTO_PADRAO,
   MOEDAS_WISE,
   obterPlano,
   obterListaPlanos,

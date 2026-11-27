@@ -97,7 +97,7 @@
 
     .planos-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
       gap: 12px;
       margin-bottom: 18px;
     }
@@ -111,7 +111,6 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      transition: border-color 0.15s ease, background-color 0.15s ease;
     }
 
     .plano-card:has(input:checked) {
@@ -160,6 +159,27 @@
       border-color: #38bdf8;
     }
 
+    .dados-metodo-box {
+      background: #060b16;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+
+    .cartao-campos {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #1e293b;
+    }
+
+    .cartao-campos.visivel {
+      display: grid;
+    }
+
     .resumo-pagamento {
       background: #060b16;
       border: 1px solid #1e293b;
@@ -183,9 +203,7 @@
       color: #38bdf8;
     }
 
-    .table-wrap {
-      overflow-x: auto;
-    }
+    .table-wrap { overflow-x: auto; }
 
     table {
       width: 100%;
@@ -226,7 +244,7 @@
     ];
     const pendentesSafe = (typeof comprasPendentes !== "undefined" && Array.isArray(comprasPendentes)) ? comprasPendentes : [];
     const confirmadosSafe = (typeof historicoCompras !== "undefined" && Array.isArray(historicoCompras)) ? historicoCompras : [];
-    const cfg = (typeof configAdmin !== "undefined" && configAdmin) ? configAdmin : { entidade: "21478" };
+    const cfg = (typeof configAdmin !== "undefined" && configAdmin) ? configAdmin : { entidade: "21478", referenciaBase: "900" };
   %>
 
   <header class="topbar">
@@ -246,7 +264,6 @@
       <div class="alert-erro"><%= erro %></div>
     <% } %>
 
-    <!-- ESCOLHA DE PLANO, MOEDA WISE, MÉTODO E CÓDIGO PROMOCIONAL -->
     <section class="card">
       <h1 class="card-title">Escolha o seu Plano (30, 60, 90, 180, 270 ou 360 Dias)</h1>
 
@@ -275,8 +292,11 @@
               <% metodosSafe.forEach(function(m) { %>
                 <option
                   value="<%= m.id %>"
+                  data-tipo="<%= m.tipo || m.id %>"
                   data-entidade="<%= m.entidade || cfg.entidade || '21478' %>"
-                  data-conta="<%= m.contaDestino || '' %>"
+                  data-chave-pix="<%= m.chavePix || '' %>"
+                  data-mbway="<%= m.numeroMbway || '' %>"
+                  data-iban="<%= m.iban || '' %>"
                   data-detalhe="<%= m.detalhe || '' %>"
                 >
                   <%= m.nome %>
@@ -306,14 +326,38 @@
           </label>
         </div>
 
+        <!-- DADOS ESPECÍFICOS DO MÉTODO SELECIONADO -->
+        <div class="dados-metodo-box">
+          <strong style="color:#38bdf8; font-size:0.9rem;">Dados para Pagamento do Método Selecionado</strong>
+          <div id="infoMetodoEspecifico" style="margin-top:8px; font-size:0.88rem; color:#e2e8f0;"></div>
+
+          <div id="camposCartao" class="cartao-campos">
+            <label>
+              Número do Cartão
+              <input type="text" name="cartaoNumero" placeholder="0000 0000 0000 0000" />
+            </label>
+            <label>
+              Nome que aparece no Cartão
+              <input type="text" name="cartaoNome" placeholder="Nome completo no cartão" />
+            </label>
+            <label>
+              Data de Validade (MM/AA)
+              <input type="text" name="cartaoValidade" placeholder="MM/AA" />
+            </label>
+            <label>
+              Código de Segurança (CVV)
+              <input type="text" name="cartaoCvv" placeholder="123" maxlength="4" />
+            </label>
+          </div>
+        </div>
+
         <input type="hidden" id="taxaCambioOntemInput" name="taxaCambioOntem" value="1" />
         <input type="hidden" id="dataCambioOntemInput" name="dataCambioOntem" value="" />
 
         <div class="resumo-pagamento">
           <div class="resumo-item">
-            <span>Entidade / Dados do Método</span>
+            <span>Entidade</span>
             <strong id="resumoEntidade"><%= cfg.entidade || "21478" %></strong>
-            <div id="resumoContaMetodo" style="font-size:0.78rem; color:#94a3b8; margin-top:2px;"></div>
           </div>
 
           <div class="resumo-item">
@@ -333,11 +377,11 @@
           </div>
         </div>
 
-        <button type="submit" class="btn">Gerar Entidade e Referência de Pagamento</button>
+        <button type="submit" class="btn">Gerar Pagamento</button>
       </form>
     </section>
 
-    <!-- PAGAMENTOS PENDENTES DE CONFIRMAÇÃO (COM BOTÃO APAGAR) -->
+    <!-- PAGAMENTOS PENDENTES -->
     <section class="card">
       <h2 class="card-title">Pagamentos Pendentes de Confirmação</h2>
       <div class="table-wrap">
@@ -346,7 +390,7 @@
             <tr>
               <th>Código</th>
               <th>Plano</th>
-              <th>Método</th>
+              <th>Método / Dados</th>
               <th>Entidade</th>
               <th>Referência</th>
               <th>Valor</th>
@@ -364,7 +408,21 @@
                 <tr>
                   <td><strong><%= item.codigoRecibo %></strong></td>
                   <td><%= item.nomePlano %></td>
-                  <td><%= item.metodoPagamento %></td>
+                  <td>
+                    <div><strong><%= item.metodoPagamento %></strong></div>
+                    <% if (item.chavePix) { %>
+                      <div style="font-size:0.78rem; color:#38bdf8;">Chave PIX: <%= item.chavePix %></div>
+                    <% } %>
+                    <% if (item.numeroMbway) { %>
+                      <div style="font-size:0.78rem; color:#38bdf8;">MB WAY: <%= item.numeroMbway %></div>
+                    <% } %>
+                    <% if (item.iban) { %>
+                      <div style="font-size:0.78rem; color:#38bdf8;">IBAN: <%= item.iban %></div>
+                    <% } %>
+                    <% if (item.cartaoResumo) { %>
+                      <div style="font-size:0.78rem; color:#38bdf8;">Cartão: <%= item.cartaoResumo %></div>
+                    <% } %>
+                  </td>
                   <td><strong><%= item.entidadePagamento || cfg.entidade || "21478" %></strong></td>
                   <td><strong><%= item.referenciaPagamento %></strong></td>
                   <td>
@@ -389,7 +447,7 @@
       </div>
     </section>
 
-    <!-- HISTÓRICO DE COMPRAS E RECIBOS CONFIRMADOS PELO ADMIN -->
+    <!-- HISTÓRICO CONFIRMADO -->
     <section class="card">
       <h2 class="card-title">Histórico de Compras e Recibos Confirmados</h2>
       <div class="table-wrap">
@@ -450,17 +508,36 @@
     function atualizarDetalhesMetodo() {
       const sel = document.getElementById("metodoPagamento");
       const entEl = document.getElementById("resumoEntidade");
-      const contaEl = document.getElementById("resumoContaMetodo");
-      if (!sel || !entEl) return;
+      const infoEl = document.getElementById("infoMetodoEspecifico");
+      const cartaoBox = document.getElementById("camposCartao");
+      if (!sel || !entEl || !infoEl) return;
 
       const opt = sel.options[sel.selectedIndex];
-      const entidade = opt ? (opt.dataset.entidade || "21478") : "21478";
-      const conta = opt ? (opt.dataset.conta || "") : "";
-      const detalhe = opt ? (opt.dataset.detalhe || "") : "";
+      const tipo = (opt?.dataset.tipo || "").toLowerCase();
+      const entidade = opt?.dataset.entidade || "21478";
+      const chavePix = opt?.dataset.chavePix || "";
+      const mbway = opt?.dataset.mbway || "";
+      const iban = opt?.dataset.iban || "";
 
-      entEl.textContent = "Entidade: " + entidade;
-      if (contaEl) {
-        contaEl.textContent = conta ? ("Conta/Chave: " + conta) : detalhe;
+      entEl.textContent = entidade;
+      if (cartaoBox) {
+        cartaoBox.classList.toggle("visivel", tipo.includes("cartao"));
+      }
+
+      if (tipo.includes("pix")) {
+        infoEl.innerHTML = "<strong>Chave PIX do Admin:</strong> " + (chavePix ? "<code>" + chavePix + "</code>" : "<span style='color:#fbbf24;'>Não cadastrada ainda pelo Admin</span>");
+      } else if (tipo.includes("mbway")) {
+        infoEl.innerHTML =
+          "<strong>Entidade:</strong> " + entidade +
+          " &nbsp;|&nbsp; <strong>Número MB WAY:</strong> " + (mbway || "<span style='color:#fbbf24;'>Não cadastrado ainda pelo Admin</span>");
+      } else if (tipo.includes("transfer")) {
+        infoEl.innerHTML =
+          "<strong>IBAN:</strong> " + (iban ? "<code>" + iban + "</code>" : "<span style='color:#fbbf24;'>Não cadastrado ainda pelo Admin</span>") +
+          " &nbsp;|&nbsp; <strong>Entidade:</strong> " + entidade;
+      } else if (tipo.includes("cartao")) {
+        infoEl.innerHTML = "Preencha os dados completos do cartão de crédito ou débito abaixo.";
+      } else {
+        infoEl.innerHTML = "<strong>Entidade:</strong> " + entidade;
       }
     }
 
