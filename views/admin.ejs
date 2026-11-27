@@ -15,6 +15,11 @@
       font-family: Arial, Helvetica, sans-serif;
     }
 
+    :focus-visible {
+      outline: 3px solid #38bdf8;
+      outline-offset: 2px;
+    }
+
     .topbar {
       position: sticky;
       top: 0;
@@ -194,7 +199,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      min-width: 165px;
+      min-width: 170px;
     }
 
     .estado-confirmado {
@@ -207,10 +212,10 @@
       font-weight: 700;
     }
 
-    .comm-grid {
+    .grid-3 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
     }
 
     .comm-box {
@@ -271,6 +276,13 @@
   <%
     const comprasSafe = (typeof compras !== "undefined" && Array.isArray(compras)) ? compras : [];
     const utilizadoresSafe = (typeof utilizadores !== "undefined" && Array.isArray(utilizadores)) ? utilizadores : [];
+    const cfg = (typeof configAdmin !== "undefined" && configAdmin) ? configAdmin : {
+      whatsapp: "",
+      telegram: "",
+      entidade: "21478",
+      referenciaBase: "900",
+      precosPlanos: { 7: 3.99, 30: 9.99, 90: 24.99, 365: 79.99 }
+    };
     const adminNome = (typeof utilizador !== "undefined" && utilizador && utilizador.nome) ? utilizador.nome : "Admin";
   %>
 
@@ -289,6 +301,7 @@
     <nav class="nav-tabs" aria-label="Secções do administrador">
       <button type="button" class="btn btn-ghost ativo" data-sec="todas" onclick="mostrarSecao('todas', this)">Todas as Secções</button>
       <button type="button" class="btn btn-ghost" data-sec="pagamentos" onclick="mostrarSecao('pagamentos', this)">Pagamentos</button>
+      <button type="button" class="btn btn-ghost" data-sec="planos" onclick="mostrarSecao('planos', this)">Preços & Entidade/Ref</button>
       <button type="button" class="btn btn-ghost" data-sec="comunicacao" onclick="mostrarSecao('comunicacao', this)">WhatsApp / Telegram / Chat</button>
       <button type="button" class="btn btn-ghost" data-sec="utilizadores" onclick="mostrarSecao('utilizadores', this)">Utilizadores</button>
     </nav>
@@ -306,7 +319,7 @@
               <th>Recibo</th>
               <th>Utilizador</th>
               <th>Plano</th>
-              <th>Método</th>
+              <th>Método / Entidade / Ref</th>
               <th>Valor</th>
               <th>Estado</th>
               <th>Ação</th>
@@ -330,11 +343,16 @@
                     <% } %>
                   </td>
                   <td><%= compra.nomePlano || (compra.planoDias ? compra.planoDias + " dias" : "-") %></td>
-                  <td><%= compra.metodoPagamento || "-" %></td>
+                  <td>
+                    <div><%= compra.metodoPagamento || "-" %></div>
+                    <div style="font-size:0.78rem; color:#94a3b8;">
+                      Ent: <%= compra.entidadePagamento || cfg.entidade || "21478" %> • Ref: <%= compra.referenciaPagamento || "-" %>
+                    </div>
+                  </td>
                   <td><%= Number(compra.valorFinal ?? compra.valorBase ?? 0).toFixed(2) %> <%= compra.moeda || "EUR" %></td>
                   <td>
                     <% if (confirmadoAdmin) { %>
-                      <span class="estado-confirmado">Confirmado pelo Admin</span>
+                      <span class="estado-confirmado">Confirmado</span>
                     <% } else { %>
                       <span class="estado-pendente">Pendente</span>
                     <% } %>
@@ -363,32 +381,69 @@
       </div>
     </section>
 
-    <!-- 2. COMUNICAÇÃO COM CLIENTE + NÚMERO/CONTACTO DO ADMIN -->
+    <!-- 2. PREÇOS DOS PLANOS + ENTIDADE E REFERÊNCIA -->
+    <section id="sec-planos" class="card">
+      <div class="card-header">
+        <h2 class="card-title">Preços dos Planos & Entidade / Referência Automática</h2>
+      </div>
+
+      <form action="/admin/precos-planos" method="POST" class="grid-3">
+        <div class="comm-box">
+          <strong style="color:#38bdf8; font-size:0.9rem;">Preços dos Planos (EUR)</strong>
+          <label class="comm-label">
+            Plano 7 Dias:
+            <input type="number" step="0.01" min="0.5" name="plano_7" value="<%= cfg.precosPlanos[7] ?? 3.99 %>" style="width:100%; margin-top:4px;" />
+          </label>
+          <label class="comm-label">
+            Plano 30 Dias:
+            <input type="number" step="0.01" min="0.5" name="plano_30" value="<%= cfg.precosPlanos[30] ?? 9.99 %>" style="width:100%; margin-top:4px;" />
+          </label>
+          <label class="comm-label">
+            Plano 90 Dias:
+            <input type="number" step="0.01" min="0.5" name="plano_90" value="<%= cfg.precosPlanos[90] ?? 24.99 %>" style="width:100%; margin-top:4px;" />
+          </label>
+          <label class="comm-label">
+            Plano 365 Dias:
+            <input type="number" step="0.01" min="0.5" name="plano_365" value="<%= cfg.precosPlanos[365] ?? 79.99 %>" style="width:100%; margin-top:4px;" />
+          </label>
+        </div>
+
+        <div class="comm-box">
+          <strong style="color:#38bdf8; font-size:0.9rem;">Entidade & Prefixo de Referência</strong>
+          <label class="comm-label">
+            Entidade Disponibilizada pelo Admin:
+            <input type="text" name="entidade" value="<%= cfg.entidade || '21478' %>" style="width:100%; margin-top:4px;" />
+          </label>
+          <label class="comm-label">
+            Prefixo / Série da Referência Gerada:
+            <input type="text" name="referenciaBase" value="<%= cfg.referenciaBase || '900' %>" style="width:100%; margin-top:4px;" />
+          </label>
+          <div style="margin-top:auto;">
+            <button type="submit" class="btn btn-sm">Guardar Preços e Entidade</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- 3. COMUNICAÇÃO COM CLIENTE + CONTACTO DO ADMIN -->
     <section id="sec-comunicacao" class="card">
       <div class="card-header">
         <h2 class="card-title">Comunicação com o Cliente • WhatsApp, Telegram e Chat Direto</h2>
       </div>
 
-      <div class="comm-grid">
-        <!-- CONTACTO DO ADMIN PARA WHATSAPP / TELEGRAM -->
+      <div class="grid-3">
         <div class="comm-box">
-          <strong style="color:#38bdf8; font-size:0.92rem;">Meu Número / Contacto do Admin (WhatsApp & Telegram)</strong>
-          <div class="comm-label">Informe o seu número com indicativo (ex: +351912345678) e utilizador/link do Telegram para interação:</div>
-
-          <input id="adminWhatsappNumero" type="text" placeholder="Seu número WhatsApp (ex: +351912345678)" />
-          <input id="adminTelegramContacto" type="text" placeholder="Seu Telegram (ex: @admin ou https://t.me/admin)" />
-
+          <strong style="color:#38bdf8; font-size:0.92rem;">Meu Número / Contacto do Admin</strong>
+          <input id="adminWhatsappNumero" type="text" value="<%= cfg.whatsapp || '' %>" placeholder="Seu número WhatsApp (ex: +351912345678)" />
+          <input id="adminTelegramContacto" type="text" value="<%= cfg.telegram || '' %>" placeholder="Seu Telegram (ex: @admin ou https://t.me/admin)" />
           <div class="comm-channels">
             <button type="button" class="btn btn-sm" onclick="salvarContatoAdmin()">Salvar Meu Contacto</button>
           </div>
           <div id="statusContatoAdmin" class="status-salvo"></div>
         </div>
 
-        <!-- CANAIS EXTERNOS PARA FALAR COM O CLIENTE -->
         <div class="comm-box">
           <strong style="color:#38bdf8; font-size:0.92rem;">Interagir com Cliente (WhatsApp / Telegram)</strong>
-
-          <label for="commClienteSelect" class="comm-label">Selecionar cliente</label>
           <select id="commClienteSelect" onchange="sincronizarClienteComm()">
             <option value="">-- Escolher cliente da lista --</option>
             <% utilizadoresSafe.forEach(function(u) { %>
@@ -413,7 +468,6 @@
           </div>
         </div>
 
-        <!-- CHAT DIRETO EM TEMPO REAL COM O CLIENTE -->
         <div class="comm-box">
           <strong style="color:#38bdf8; font-size:0.92rem;">Chat Direto em Tempo Real</strong>
           <div id="chatClienteLog" class="chat-box">
@@ -429,7 +483,7 @@
       </div>
     </section>
 
-    <!-- 3. UTILIZADORES -->
+    <!-- 4. UTILIZADORES -->
     <section id="sec-utilizadores" class="card">
       <div class="card-header">
         <h2 class="card-title">Utilizadores, País/Telefone, Dias Gratuitos e Código Promocional</h2>
@@ -518,6 +572,43 @@
   </main>
 
   <script>
+    const INATIVIDADE_MS = 30 * 60 * 1000;
+    let timerInatividade = null;
+
+    function resetarInatividadeAdmin() {
+      if (timerInatividade) clearTimeout(timerInatividade);
+      timerInatividade = setTimeout(function () {
+        window.location.href = "/logout";
+      }, INATIVIDADE_MS);
+    }
+
+    ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach(function (evt) {
+      window.addEventListener(evt, resetarInatividadeAdmin, { passive: true });
+    });
+
+    // Navegação por controle remoto (setas + Enter + Escape)
+    document.addEventListener("keydown", function (e) {
+      const focaveis = Array.from(
+        document.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])")
+      ).filter((el) => el.offsetParent !== null);
+
+      const idxAtual = focaveis.indexOf(document.activeElement);
+
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+        e.preventDefault();
+        const proximo = focaveis[(idxAtual + 1) % focaveis.length];
+        if (proximo) proximo.focus();
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+        e.preventDefault();
+        const anterior = focaveis[(idxAtual - 1 + focaveis.length) % focaveis.length];
+        if (anterior) anterior.focus();
+      } else if (e.key === "Escape") {
+        mostrarSecao("todas", document.querySelector('.nav-tabs [data-sec="todas"]'));
+      }
+    });
+
     function escaparHtml(str) {
       return String(str || "")
         .replace(/&/g, "&amp;")
@@ -528,10 +619,12 @@
 
     function mostrarSecao(secao, btnClicado) {
       const pag = document.getElementById("sec-pagamentos");
+      const planos = document.getElementById("sec-planos");
       const comm = document.getElementById("sec-comunicacao");
       const users = document.getElementById("sec-utilizadores");
 
       if (pag) pag.classList.toggle("secao-oculta", !(secao === "todas" || secao === "pagamentos"));
+      if (planos) planos.classList.toggle("secao-oculta", !(secao === "todas" || secao === "planos"));
       if (comm) comm.classList.toggle("secao-oculta", !(secao === "todas" || secao === "comunicacao"));
       if (users) users.classList.toggle("secao-oculta", !(secao === "todas" || secao === "utilizadores"));
 
@@ -545,11 +638,6 @@
       const statusEl = document.getElementById("statusContatoAdmin");
 
       try {
-        localStorage.setItem("alphatv_admin_whatsapp", whatsapp);
-        localStorage.setItem("alphatv_admin_telegram", telegram);
-      } catch (e) {}
-
-      try {
         await fetch("/api/admin/contato-suporte", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -560,17 +648,6 @@
       if (statusEl) {
         statusEl.textContent = "Contacto do admin guardado com sucesso.";
       }
-    }
-
-    function carregarContatoAdminSalvo() {
-      try {
-        const wa = localStorage.getItem("alphatv_admin_whatsapp") || "";
-        const tg = localStorage.getItem("alphatv_admin_telegram") || "";
-        const waInput = document.getElementById("adminWhatsappNumero");
-        const tgInput = document.getElementById("adminTelegramContacto");
-        if (waInput && wa) waInput.value = wa;
-        if (tgInput && tg) tgInput.value = tg;
-      } catch (e) {}
     }
 
     function sincronizarClienteComm() {
@@ -672,9 +749,11 @@
     }
 
     window.addEventListener("DOMContentLoaded", function () {
-      carregarContatoAdminSalvo();
+      resetarInatividadeAdmin();
       sincronizarMensagensTempoReal();
       setInterval(sincronizarMensagensTempoReal, 2000);
+      const primeiroBotao = document.querySelector(".topbar a, .topbar button");
+      if (primeiroBotao) primeiroBotao.focus();
     });
   </script>
 </body>

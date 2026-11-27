@@ -608,8 +608,43 @@
       </div>
     </aside>
   </main>
+<script>
+  function atualizarResumoComDesconto() {
+    const selPlano = document.getElementById("planoDias");
+    const inputCodigo = document.getElementById("codigoPromocional");
+    const elTotal = document.getElementById("valorFinalCalculado");
+    if (!selPlano || !elTotal) return;
 
+    const opt = selPlano.options[selPlano.selectedIndex];
+    const precoBase = parseFloat(opt ? opt.dataset.preco : "9.99") || 9.99;
+    const codigo = (inputCodigo ? inputCodigo.value : "").trim();
+    const temDesconto = codigo.length >= 4;
+    const valorFinal = temDesconto ? Math.max(0.5, precoBase * 0.9) : precoBase;
+
+    elTotal.textContent = valorFinal.toFixed(2) + " EUR" + (temDesconto ? " (10% desconto aplicado)" : "");
+  }
+</script>
   <script>
+
+    document.addEventListener("keydown", function (e) {
+      const focaveis = Array.from(
+        document.querySelectorAll("a[href], button:not([disabled]), input:not([disabled])")
+      ).filter((el) => el.offsetParent !== null);
+      const idx = focaveis.indexOf(document.activeElement);
+
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+        e.preventDefault();
+        const next = focaveis[(idx + 1) % focaveis.length];
+        if (next) next.focus();
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+        e.preventDefault();
+        const prev = focaveis[(idx - 1 + focaveis.length) % focaveis.length];
+        if (prev) prev.focus();
+      }
+    });
+
     let hlsInstance = null;
     const titulosSecao = {
       codigo: "Código Promocional para Convidar",
@@ -773,5 +808,6 @@
       }
     });
   </script>
+  
 </body>
 </html>
