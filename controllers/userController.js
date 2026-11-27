@@ -4,9 +4,9 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const Compra = require("../models/Compra");
 const {
-  PLANOS_SUBSCRICAO,
-  METODOS_PAGAMENTO,
+  MOEDAS_WISE,
   obterPlano,
+  obterListaPlanos,
   normalizarTelefonePorPais,
   gerarCodigoPromocional,
   gerarCodigoRecibo,
@@ -22,6 +22,17 @@ function compraConfirmadaPeloAdmin(compra) {
   return (
     String(compra.status || "").toLowerCase() === "confirmado" &&
     compra.confirmadoPorAdmin === true
+  );
+}
+
+function obterConfigGlobal(req) {
+  return (
+    (req.app && req.app.locals && req.app.locals.configAdmin) || {
+      entidade: "21478",
+      referenciaBase: "900",
+      precosPlanos: { 30: 9.99, 60: 17.99, 90: 24.99, 180: 44.99, 270: 64.99, 360: 79.99 },
+      metodosPagamento: [],
+    }
   );
 }
 
@@ -206,6 +217,9 @@ async function login(req, res) {
       email: user.email,
       role: admin ? "Administrador" : "Utilizador",
     };
+    if (admin) {
+      req.session.adminUltimaAtividade = Date.now();
+    }
 
     return res.redirect(admin ? "/admin" : "/player");
   } catch (erro) {
@@ -424,6 +438,10 @@ async function mostrarSubscricao(req, res) {
     const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
 
+    const cfg = obterConfigGlobal(req);
+    const planosAtualizados = obterListaPlanos(cfg.precosPlanos);
+    const metodosAtivos = (cfg.metodosPagamento || []).filter((m) => m.ativo !== false);
+
     const comprasPendentes = await Compra.find({
       utilizadorId: user._id,
       status: "pendente",
@@ -435,11 +453,13 @@ async function mostrarSubscricao(req, res) {
 
     return res.render("subscricao", {
       utilizador: user,
-      planos: Object.values(PLANOS_SUBSCRICAO),
-      metodos: METODOS_PAGAMENTO,
+      planos: planosAtualizados,
+      metodos: metodosAtivos,
+      moedasWise: MOEDAS_WISE,
+      configAdmin: cfg,
       comprasPendentes,
       historicoCompras: [...historicoConfirmadoAdmin].reverse(),
-      erro: null,
+      erro: req.query && req.query.erro ? String(req.query.erro) : null,
     });
   } catch (erro) {
     console.error("Erro ao carregar /subscricao:", erro);
@@ -452,14 +472,22 @@ async function iniciarPagamento(req, res) {
     const sessId = req.session?.utilizador?.id;
     if (!sessId) return res.redirect("/");
 
-    const { planoDias, metodoPagamento, codigoPromocional } = req.body;
-    const plano = obterPlano(planoDias);
+    const cfg = obterConfigGlobal(req);
+    const {
+      planoDias,
+      metodoPagamento,
+      codigoPromocional,
+      moedaPreferida,
+      taxaCambioOntem,
+      dataCambioOntem,
+    } = req.body;
+
+    const plano = obterPlano(planoDias, cfg.precosPlanos);
     if (!plano) return res.redirect("/subscricao");
 
-    const metodoValido = METODOS_PAGAMENTO.find(
-      (m) => m.id === metodoPagamento,
-    );
-    const nomeMetodo = metodoValido ? metodoValido.nome : "Pagamento";
+    const metodoObj = (cfg.metodosPagamento || []).find((m) => m.id === metodoPagamento);
+    const nomeMetodo = metodoObj ? metodoObj.nome : String(metodoPagamento || "Pagamento");
+    const entidadeMetodo = (metodoObj && metodoObj.entidade) || cfg.entidade || "21478";
 
     const user = await User.findById(sessId);
     if (!user) return res.redirect("/");
@@ -472,19 +500,24 @@ async function iniciarPagamento(req, res) {
       const donoCodigo = await User.findOne({
         codigoPromocional: codLimpo,
         codigoPromocionalLiberado: true,
-        _id: { $ne: user._id },
       });
       if (donoCodigo) {
         codigoAplicado = codLimpo;
         desconto = Number((plano.valorBase * 0.1).toFixed(2));
+      } else {
+        return res.redirect(
+          "/subscricao?erro=" + encodeURIComponent("Código promocional inválido ou não disponibilizado pelo admin."),
+        );
       }
     }
 
-    const valorFinal = Number(
-      Math.max(0.5, plano.valorBase - desconto).toFixed(2),
-    );
+    const valorFinal = Number(Math.max(0.5, plano.valorBase - desconto).toFixed(2));
+    const moedaSel = String(moedaPreferida || "EUR").toUpperCase();
+    const taxaNum = Number(taxaCambioOntem) > 0 ? Number(taxaCambioOntem) : 1;
+    const valorConvertido = Number((valorFinal * taxaNum).toFixed(2));
+
     const codigoRecibo = gerarCodigoRecibo();
-    const referenciaPagamento = gerarReferenciaPagamento(metodoPagamento);
+    const referenciaPagamento = gerarReferenciaPagamento(metodoPagamento, cfg.referenciaBase);
 
     await Compra.create({
       utilizadorId: user._id,
@@ -496,8 +529,13 @@ async function iniciarPagamento(req, res) {
       valorBase: plano.valorBase,
       desconto,
       valorFinal,
-      moeda: plano.moeda,
+      moeda: "EUR",
+      moedaConvertida: moedaSel,
+      taxaCambioOntem: taxaNum,
+      dataCambioOntem: String(dataCambioOntem || ""),
+      valorConvertido,
       metodoPagamento: nomeMetodo,
+      entidadePagamento: entidadeMetodo,
       referenciaPagamento,
       codigoPromocionalUsado: codigoAplicado,
       status: "pendente",
@@ -512,7 +550,6 @@ async function iniciarPagamento(req, res) {
   }
 }
 
-// Confirmação de recebimento é exclusiva do administrador; o cliente apenas aguarda
 async function confirmarPagamento(req, res) {
   try {
     const sessUser = req.session?.utilizador;
@@ -524,66 +561,67 @@ async function confirmarPagamento(req, res) {
 
     const { codigoRecibo } = req.params;
     const compra = await Compra.findOne({ codigoRecibo });
-    if (!compra) {
-      return res.status(404).send("Pedido de pagamento não encontrado.");
-    }
+    if (!compra) return res.redirect("/admin");
 
     const user = await User.findById(compra.utilizadorId);
-    if (!user) {
-      return res.status(404).send("Utilizador da compra não encontrado.");
+    if (!user) return res.redirect("/admin");
+
+    const agora = new Date();
+    const baseData =
+      user.statusSubscricao === "ativo" &&
+      user.pagoAte &&
+      new Date(user.pagoAte) > agora
+        ? new Date(user.pagoAte).getTime()
+        : agora.getTime();
+    const validoAte = new Date(
+      baseData + compra.planoDias * 24 * 60 * 60 * 1000,
+    );
+
+    await Compra.updateOne(
+      { _id: compra._id },
+      {
+        $set: {
+          status: "confirmado",
+          confirmadoPorAdmin: true,
+          confirmadoPorAdminId: sessUser.id,
+          confirmadoEm: agora,
+          validoAte,
+        },
+      },
+    );
+
+    user.statusSubscricao = "ativo";
+    user.pagoAte = validoAte;
+
+    const registoRecibo = {
+      codigoRecibo: compra.codigoRecibo,
+      planoDias: compra.planoDias,
+      nomePlano: compra.nomePlano,
+      valorBase: compra.valorBase,
+      desconto: compra.desconto,
+      valorFinal: compra.valorFinal,
+      moeda: compra.moeda || "EUR",
+      metodoPagamento: compra.metodoPagamento,
+      entidadePagamento: compra.entidadePagamento || "21478",
+      referenciaPagamento: compra.referenciaPagamento,
+      codigoPromocionalUsado: compra.codigoPromocionalUsado,
+      status: "confirmado",
+      confirmadoPorAdmin: true,
+      dataPagamento: agora,
+      validoAte,
+    };
+
+    const indiceExistente = (user.historicoCompras || []).findIndex(
+      (c) => c.codigoRecibo === compra.codigoRecibo,
+    );
+    if (indiceExistente >= 0) {
+      user.historicoCompras[indiceExistente] = registoRecibo;
+    } else {
+      user.historicoCompras.push(registoRecibo);
     }
+    await user.save();
 
-    if (!compraConfirmadaPeloAdmin(compra)) {
-      const agora = new Date();
-      const baseData =
-        user.statusSubscricao === "ativo" &&
-        user.pagoAte &&
-        new Date(user.pagoAte) > agora
-          ? new Date(user.pagoAte).getTime()
-          : agora.getTime();
-      const validoAte = new Date(
-        baseData + compra.planoDias * 24 * 60 * 60 * 1000,
-      );
-
-      compra.status = "confirmado";
-      compra.confirmadoPorAdmin = true;
-      compra.confirmadoPorAdminId = sessUser.id;
-      compra.confirmadoEm = agora;
-      compra.validoAte = validoAte;
-      await compra.save();
-
-      user.statusSubscricao = "ativo";
-      user.pagoAte = validoAte;
-
-      const registoRecibo = {
-        codigoRecibo: compra.codigoRecibo,
-        planoDias: compra.planoDias,
-        nomePlano: compra.nomePlano,
-        valorBase: compra.valorBase,
-        desconto: compra.desconto,
-        valorFinal: compra.valorFinal,
-        moeda: compra.moeda,
-        metodoPagamento: compra.metodoPagamento,
-        referenciaPagamento: compra.referenciaPagamento,
-        codigoPromocionalUsado: compra.codigoPromocionalUsado,
-        status: "confirmado",
-        confirmadoPorAdmin: true,
-        dataPagamento: agora,
-        validoAte,
-      };
-
-      const indiceExistente = (user.historicoCompras || []).findIndex(
-        (c) => c.codigoRecibo === compra.codigoRecibo,
-      );
-      if (indiceExistente >= 0) {
-        user.historicoCompras[indiceExistente] = registoRecibo;
-      } else {
-        user.historicoCompras.push(registoRecibo);
-      }
-      await user.save();
-    }
-
-    return res.redirect(`/recibo/${encodeURIComponent(compra.codigoRecibo)}`);
+    return res.redirect("/admin");
   } catch (erro) {
     console.error("Erro ao confirmar pagamento:", erro);
     return res.redirect("/admin");

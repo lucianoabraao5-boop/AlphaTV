@@ -281,8 +281,10 @@
       telegram: "",
       entidade: "21478",
       referenciaBase: "900",
-      precosPlanos: { 7: 3.99, 30: 9.99, 90: 24.99, 365: 79.99 }
+      precosPlanos: { 30: 9.99, 60: 17.99, 90: 24.99, 180: 44.99, 270: 64.99, 360: 79.99 },
+      metodosPagamento: []
     };
+    const metodosSafe = Array.isArray(cfg.metodosPagamento) ? cfg.metodosPagamento : [];
     const adminNome = (typeof utilizador !== "undefined" && utilizador && utilizador.nome) ? utilizador.nome : "Admin";
   %>
 
@@ -301,12 +303,12 @@
     <nav class="nav-tabs" aria-label="Secções do administrador">
       <button type="button" class="btn btn-ghost ativo" data-sec="todas" onclick="mostrarSecao('todas', this)">Todas as Secções</button>
       <button type="button" class="btn btn-ghost" data-sec="pagamentos" onclick="mostrarSecao('pagamentos', this)">Pagamentos</button>
-      <button type="button" class="btn btn-ghost" data-sec="planos" onclick="mostrarSecao('planos', this)">Preços & Entidade/Ref</button>
+      <button type="button" class="btn btn-ghost" data-sec="planos" onclick="mostrarSecao('planos', this)">Planos & Métodos</button>
       <button type="button" class="btn btn-ghost" data-sec="comunicacao" onclick="mostrarSecao('comunicacao', this)">WhatsApp / Telegram / Chat</button>
       <button type="button" class="btn btn-ghost" data-sec="utilizadores" onclick="mostrarSecao('utilizadores', this)">Utilizadores</button>
     </nav>
 
-    <!-- 1. PAGAMENTOS E CONFIRMAÇÃO DE RECEBIMENTO PELO ADMIN -->
+    <!-- 1. PAGAMENTOS E CONFIRMAÇÃO DE RECEBIMENTO -->
     <section id="sec-pagamentos" class="card">
       <div class="card-header">
         <h2 class="card-title">Pagamentos e Confirmação de Recebimento</h2>
@@ -349,7 +351,14 @@
                       Ent: <%= compra.entidadePagamento || cfg.entidade || "21478" %> • Ref: <%= compra.referenciaPagamento || "-" %>
                     </div>
                   </td>
-                  <td><%= Number(compra.valorFinal ?? compra.valorBase ?? 0).toFixed(2) %> <%= compra.moeda || "EUR" %></td>
+                  <td>
+                    <div><%= Number(compra.valorFinal ?? compra.valorBase ?? 0).toFixed(2) %> EUR</div>
+                    <% if (compra.moedaConvertida && compra.moedaConvertida !== "EUR") { %>
+                      <div style="font-size:0.76rem; color:#38bdf8;">
+                        ≈ <%= Number(compra.valorConvertido || 0).toFixed(2) %> <%= compra.moedaConvertida %>
+                      </div>
+                    <% } %>
+                  </td>
                   <td>
                     <% if (confirmadoAdmin) { %>
                       <span class="estado-confirmado">Confirmado</span>
@@ -363,6 +372,11 @@
                         <form action="/admin/confirmar-pagamento/<%= encodeURIComponent(compra.codigoRecibo) %>" method="POST" style="margin:0;">
                           <button type="submit" class="btn btn-sm" style="width:100%; justify-content:center;">
                             Confirmar Recebimento
+                          </button>
+                        </form>
+                        <form action="/pagamento/<%= encodeURIComponent(compra.codigoRecibo) %>/apagar" method="POST" onsubmit="return confirm('Apagar este pagamento pendente?');" style="margin:0;">
+                          <button type="submit" class="btn btn-danger btn-sm" style="width:100%; justify-content:center;">
+                            Apagar
                           </button>
                         </form>
                       <% } %>
@@ -381,41 +395,31 @@
       </div>
     </section>
 
-    <!-- 2. PREÇOS DOS PLANOS + ENTIDADE E REFERÊNCIA -->
+    <!-- 2. PREÇOS DOS PLANOS (30, 60, 90, 180, 270, 360 DIAS) & MÉTODOS DE PAGAMENTO -->
     <section id="sec-planos" class="card">
       <div class="card-header">
-        <h2 class="card-title">Preços dos Planos & Entidade / Referência Automática</h2>
+        <h2 class="card-title">Planos (30, 60, 90, 180, 270, 360 Dias) • Entidade & Métodos de Pagamento</h2>
       </div>
 
-      <form action="/admin/precos-planos" method="POST" class="grid-3">
+      <form action="/admin/precos-planos" method="POST" class="grid-3" style="margin-bottom:18px;">
         <div class="comm-box">
           <strong style="color:#38bdf8; font-size:0.9rem;">Preços dos Planos (EUR)</strong>
-          <label class="comm-label">
-            Plano 7 Dias:
-            <input type="number" step="0.01" min="0.5" name="plano_7" value="<%= cfg.precosPlanos[7] ?? 3.99 %>" style="width:100%; margin-top:4px;" />
-          </label>
-          <label class="comm-label">
-            Plano 30 Dias:
-            <input type="number" step="0.01" min="0.5" name="plano_30" value="<%= cfg.precosPlanos[30] ?? 9.99 %>" style="width:100%; margin-top:4px;" />
-          </label>
-          <label class="comm-label">
-            Plano 90 Dias:
-            <input type="number" step="0.01" min="0.5" name="plano_90" value="<%= cfg.precosPlanos[90] ?? 24.99 %>" style="width:100%; margin-top:4px;" />
-          </label>
-          <label class="comm-label">
-            Plano 365 Dias:
-            <input type="number" step="0.01" min="0.5" name="plano_365" value="<%= cfg.precosPlanos[365] ?? 79.99 %>" style="width:100%; margin-top:4px;" />
-          </label>
+          <% [30, 60, 90, 180, 270, 360].forEach(function(dias) { %>
+            <label class="comm-label">
+              Plano <%= dias %> Dias:
+              <input type="number" step="0.01" min="0.5" name="plano_<%= dias %>" value="<%= cfg.precosPlanos[dias] ?? 9.99 %>" style="width:100%; margin-top:4px;" />
+            </label>
+          <% }); %>
         </div>
 
         <div class="comm-box">
-          <strong style="color:#38bdf8; font-size:0.9rem;">Entidade & Prefixo de Referência</strong>
+          <strong style="color:#38bdf8; font-size:0.9rem;">Entidade Geral & Série de Referência</strong>
           <label class="comm-label">
-            Entidade Disponibilizada pelo Admin:
+            Entidade Padrão:
             <input type="text" name="entidade" value="<%= cfg.entidade || '21478' %>" style="width:100%; margin-top:4px;" />
           </label>
           <label class="comm-label">
-            Prefixo / Série da Referência Gerada:
+            Prefixo de Referência Automática:
             <input type="text" name="referenciaBase" value="<%= cfg.referenciaBase || '900' %>" style="width:100%; margin-top:4px;" />
           </label>
           <div style="margin-top:auto;">
@@ -423,6 +427,65 @@
           </div>
         </div>
       </form>
+
+      <!-- CADASTRO E EDIÇÃO DOS MÉTODOS DE PAGAMENTO -->
+      <div class="comm-box">
+        <strong style="color:#38bdf8; font-size:0.95rem;">Métodos de Pagamento (Gerar / Cadastrar / Editar Entidade e Conta)</strong>
+
+        <form action="/admin/metodos-pagamento" method="POST">
+          <input type="hidden" name="acao" value="salvar" />
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ativo</th>
+                  <th>Método</th>
+                  <th>Entidade</th>
+                  <th>Conta / IBAN / Chave</th>
+                  <th>Descrição</th>
+                  <th>Remover</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% metodosSafe.forEach(function(m) { %>
+                  <tr>
+                    <td>
+                      <input type="checkbox" name="ativo_<%= m.id %>" <%= m.ativo !== false ? "checked" : "" %> />
+                    </td>
+                    <td>
+                      <input type="text" name="nome_<%= m.id %>" value="<%= m.nome %>" style="width:160px;" />
+                    </td>
+                    <td>
+                      <input type="text" name="entidade_<%= m.id %>" value="<%= m.entidade || cfg.entidade || '21478' %>" style="width:110px;" />
+                    </td>
+                    <td>
+                      <input type="text" name="conta_<%= m.id %>" value="<%= m.contaDestino || '' %>" placeholder="IBAN / Tel / Email" style="width:190px;" />
+                    </td>
+                    <td>
+                      <input type="text" name="detalhe_<%= m.id %>" value="<%= m.detalhe || '' %>" style="width:200px;" />
+                    </td>
+                    <td>
+                      <button type="submit" name="acao" value="remover_<%= m.id %>" class="btn btn-danger btn-sm">Apagar</button>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:10px;">
+            <button type="submit" class="btn btn-sm">Guardar Alterações nos Métodos</button>
+          </div>
+        </form>
+
+        <form action="/admin/metodos-pagamento" method="POST" class="inline-form" style="margin-top:12px; padding-top:12px; border-top:1px solid #1e293b;">
+          <input type="hidden" name="acao" value="novo" />
+          <input type="text" name="novoNome" placeholder="Novo método (ex: Revolut / Stripe)" required />
+          <input type="text" name="novaEntidade" value="<%= cfg.entidade || '21478' %>" placeholder="Entidade" style="width:110px;" />
+          <input type="text" name="novaConta" placeholder="Conta / IBAN / Chave" />
+          <input type="text" name="novoDetalhe" placeholder="Instrução curta" />
+          <button type="submit" class="btn btn-sm">+ Cadastrar Método</button>
+        </form>
+      </div>
     </section>
 
     <!-- 3. COMUNICAÇÃO COM CLIENTE + CONTACTO DO ADMIN -->
@@ -543,7 +606,7 @@
                   <td>
                     <div class="acoes-stack">
                       <form action="/admin/utilizador/<%= u._id %>/dias" method="POST" class="inline-form">
-                        <input type="number" name="dias" value="7" min="1" max="365" style="width:62px;" />
+                        <input type="number" name="dias" value="30" min="1" max="3650" style="width:62px;" />
                         <button type="submit" class="btn btn-sm">Renovar Dias</button>
                       </form>
 
@@ -586,29 +649,6 @@
       window.addEventListener(evt, resetarInatividadeAdmin, { passive: true });
     });
 
-    // Navegação por controle remoto (setas + Enter + Escape)
-    document.addEventListener("keydown", function (e) {
-      const focaveis = Array.from(
-        document.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])")
-      ).filter((el) => el.offsetParent !== null);
-
-      const idxAtual = focaveis.indexOf(document.activeElement);
-
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-        if (document.activeElement && document.activeElement.tagName === "INPUT") return;
-        e.preventDefault();
-        const proximo = focaveis[(idxAtual + 1) % focaveis.length];
-        if (proximo) proximo.focus();
-      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-        if (document.activeElement && document.activeElement.tagName === "INPUT") return;
-        e.preventDefault();
-        const anterior = focaveis[(idxAtual - 1 + focaveis.length) % focaveis.length];
-        if (anterior) anterior.focus();
-      } else if (e.key === "Escape") {
-        mostrarSecao("todas", document.querySelector('.nav-tabs [data-sec="todas"]'));
-      }
-    });
-
     function escaparHtml(str) {
       return String(str || "")
         .replace(/&/g, "&amp;")
@@ -645,9 +685,7 @@
         });
       } catch (e) {}
 
-      if (statusEl) {
-        statusEl.textContent = "Contacto do admin guardado com sucesso.";
-      }
+      if (statusEl) statusEl.textContent = "Contacto do admin guardado com sucesso.";
     }
 
     function sincronizarClienteComm() {
@@ -752,8 +790,6 @@
       resetarInatividadeAdmin();
       sincronizarMensagensTempoReal();
       setInterval(sincronizarMensagensTempoReal, 2000);
-      const primeiroBotao = document.querySelector(".topbar a, .topbar button");
-      if (primeiroBotao) primeiroBotao.focus();
     });
   </script>
 </body>
