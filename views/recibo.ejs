@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlphaTV | Fatura / Recibo</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #050811;
+      color: #e2e8f0;
+      font-family: Arial, Helvetica, sans-serif;
+      padding: 24px;
+    }
+
+    .recibo-shell {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      color: #38bdf8;
+      font-size: 1.4rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .acoes-topo {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 7px;
+      padding: 8px 14px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #0ea5e9;
+    }
+
+    .btn-secundario {
+      background: #0b1324;
+      color: #38bdf8;
+      border: 1px solid #1e293b;
+    }
+
+    .btn-secundario:hover {
+      background: #082f49;
+      border-color: #38bdf8;
+    }
+
+    .card {
+      background: #0b1324;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 0 26px rgba(2, 132, 199, 0.14);
+    }
+
+    .recibo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #1e293b;
+      flex-wrap: wrap;
+    }
+
+    .recibo-titulo {
+      margin: 0 0 4px 0;
+      color: #38bdf8;
+      font-size: 1.3rem;
+    }
+
+    .codigo-recibo {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .estado-badge {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: rgba(14, 165, 233, 0.16);
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+    }
+
+    .detalhes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .detalhe-box {
+      background: #060b16;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .detalhe-label {
+      font-size: 0.76rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .detalhe-valor {
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: #f8fafc;
+      word-break: break-word;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #1e293b;
+      text-align: left;
+    }
+
+    th {
+      color: #94a3b8;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
+
+    .total-linha td {
+      font-weight: 800;
+      color: #38bdf8;
+      font-size: 1rem;
+      border-bottom: none;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        color: #000000;
+        padding: 0;
+      }
+      .topbar, .acoes-topo {
+        display: none;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid #cccccc;
+        box-shadow: none;
+        color: #000000;
+      }
+      .detalhe-box {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+      .detalhe-valor, .recibo-titulo, .total-linha td {
+        color: #000000;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%
+    const userSafe = (typeof utilizador !== "undefined" && utilizador) ? utilizador : {};
+    const compSafe = (typeof compra !== "undefined" && compra) ? compra : {};
+    const confirmadoAdmin = String(compSafe.status || "").toLowerCase() === "confirmado" && compSafe.confirmadoPorAdmin === true;
+    const moeda = compSafe.moeda || "EUR";
+    const valorBase = Number(compSafe.valorBase ?? compSafe.valorFinal ?? 0).toFixed(2);
+    const desconto = Number(compSafe.desconto ?? 0).toFixed(2);
+    const valorFinal = Number(compSafe.valorFinal ?? compSafe.valorBase ?? 0).toFixed(2);
+    const dataEmissao = compSafe.confirmadoEm || compSafe.dataPagamento || new Date();
+  %>
+
+  <div class="recibo-shell">
+    <div class="topbar">
+      <a href="/player" class="brand">AlphaTV</a>
+      <div class="acoes-topo">
+        <% if (confirmadoAdmin) { %>
+          <button type="button" class="btn btn-secundario" onclick="window.print()">Imprimir / Guardar PDF</button>
+        <% } %>
+        <a href="/subscricao" class="btn btn-secundario">Planos</a>
+        <a href="/player" class="btn">Voltar ao Player</a>
+      </div>
+    </div>
+
+    <article class="card">
+      <% if (!confirmadoAdmin) { %>
+        <h1 class="recibo-titulo">Recibo Indisponível</h1>
+        <p style="color:#94a3b8; margin:8px 0 0 0;">
+          Este recibo só será gerado e disponibilizado após a confirmação do pagamento pelo administrador.
+        </p>
+      <% } else { %>
+        <div class="recibo-header">
+          <div>
+            <h1 class="recibo-titulo">Fatura / Recibo de Subscrição</h1>
+            <div class="codigo-recibo">Código: <%= compSafe.codigoRecibo || "-" %></div>
+          </div>
+          <span class="estado-badge">Confirmado pelo Admin</span>
+        </div>
+
+        <div class="detalhes-grid">
+          <div class="detalhe-box">
+            <div class="detalhe-label">Cliente</div>
+            <div class="detalhe-valor"><%= userSafe.nome || compSafe.nomeUtilizador || "Utilizador" %></div>
+            <div style="font-size:0.82rem; color:#94a3b8; margin-top:2px;"><%= userSafe.email || compSafe.emailUtilizador || "-" %></div>
+          </div>
+
+          <div class="detalhe-box">
+            <div class="detalhe-label">Data de Confirmação</div>
+            <div class="detalhe-valor"><%= new Date(dataEmissao).toLocaleDateString("pt-PT") %></div>
+          </div>
+
+          <div class="detalhe-box">
+            <div class="detalhe-label">Método / Referência</div>
+            <div class="detalhe-valor"><%= compSafe.metodoPagamento || "Pagamento" %></div>
+            <div style="font-size:0.82rem; color:#94a3b8; margin-top:2px;"><%= compSafe.referenciaPagamento || "-" %></div>
+          </div>
+
+          <div class="detalhe-box">
+            <div class="detalhe-label">Válido Até</div>
+            <div class="detalhe-valor">
+              <%= compSafe.validoAte ? new Date(compSafe.validoAte).toLocaleDateString("pt-PT") : "-" %>
+            </div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Duração</th>
+              <th>Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><%= compSafe.nomePlano || "Subscrição AlphaTV" %></td>
+              <td><%= compSafe.planoDias ? compSafe.planoDias + " dias" : "-" %></td>
+              <td><%= valorBase %> <%= moeda %></td>
+            </tr>
+            <% if (Number(desconto) > 0) { %>
+              <tr>
+                <td>Desconto promocional (<%= compSafe.codigoPromocionalUsado || "" %>)</td>
+                <td>-</td>
+                <td>-<%= desconto %> <%= moeda %></td>
+              </tr>
+            <% } %>
+            <tr class="total-linha">
+              <td colspan="2">Total Pago</td>
+              <td><%= valorFinal %> <%= moeda %></td>
+            </tr>
+          </tbody>
+        </table>
+      <% } %>
+    </article>
+  </div>
+</body>
+</html>
