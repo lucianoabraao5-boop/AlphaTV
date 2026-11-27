@@ -17,6 +17,14 @@ function isAdminRole(role) {
   return String(role || "").toLowerCase() === "administrador";
 }
 
+function compraConfirmadaPeloAdmin(compra) {
+  if (!compra) return false;
+  return (
+    String(compra.status || "").toLowerCase() === "confirmado" &&
+    compra.confirmadoPorAdmin === true
+  );
+}
+
 function obterIpLocalRede() {
   const interfaces = os.networkInterfaces();
   for (const nome of Object.keys(interfaces)) {
@@ -32,8 +40,10 @@ function obterIpLocalRede() {
 function construirBaseUrlAcessivel(req) {
   const xfProto = String(req.get("x-forwarded-proto") || "")
     .split(",")[0]
-    .trim();
-  const protocolo = xfProto || req.protocol || "http";
+    .trim()
+    .toLowerCase();
+  const protocolo =
+    xfProto === "https" || xfProto === "http" ? xfProto : req.protocol || "http";
   const hostAtual = String(req.get("host") || "localhost:3000").trim();
 
   if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(hostAtual)) {
@@ -256,9 +266,12 @@ async function logout(req, res) {
         JSON.stringify(dadosQr),
         "utf8",
       ).toString("base64");
-      const ehHttps = String(req.get("x-forwarded-proto") || req.protocol || "")
-        .toLowerCase()
-        .includes("https");
+      const xfProto = String(req.get("x-forwarded-proto") || "")
+        .split(",")[0]
+        .trim()
+        .toLowerCase();
+      const ehHttps = xfProto === "https" || req.protocol === "https";
+
       res.cookie("alphatv_qr_rec", base64Payload, {
         maxAge: 24 * 60 * 60 * 1000,
         httpOnly: false,
@@ -416,12 +429,16 @@ async function mostrarSubscricao(req, res) {
       status: "pendente",
     }).sort({ criadoEm: -1 });
 
+    const historicoConfirmadoAdmin = (user.historicoCompras || []).filter(
+      (c) => compraConfirmadaPeloAdmin(c),
+    );
+
     return res.render("subscricao", {
       utilizador: user,
       planos: Object.values(PLANOS_SUBSCRICAO),
       metodos: METODOS_PAGAMENTO,
       comprasPendentes,
-      historicoCompras: [...(user.historicoCompras || [])].reverse(),
+      historicoCompras: [...historicoConfirmadoAdmin].reverse(),
       erro: null,
     });
   } catch (erro) {
@@ -469,6 +486,7 @@ async function iniciarPagamento(req, res) {
     const codigoRecibo = gerarCodigoRecibo();
     const referenciaPagamento = gerarReferenciaPagamento(metodoPagamento);
 
+    // Recibo NÃO é emitido aqui: fica pendente até confirmação explícita do administrador
     await Compra.create({
       utilizadorId: user._id,
       nomeUtilizador: user.nome,
@@ -484,6 +502,7 @@ async function iniciarPagamento(req, res) {
       referenciaPagamento,
       codigoPromocionalUsado: codigoAplicado,
       status: "pendente",
+      confirmadoPorAdmin: false,
       criadoEm: new Date(),
     });
 
@@ -494,23 +513,32 @@ async function iniciarPagamento(req, res) {
   }
 }
 
+// Apenas um administrador pode confirmar o pagamento e libertar o recibo
 async function confirmarPagamento(req, res) {
   try {
-    const sessId = req.session?.utilizador?.id;
-    if (!sessId) return res.redirect("/");
+    const sessUser = req.session?.utilizador;
+    if (!sessUser || !sessUser.id) return res.redirect("/");
+
+    if (!isAdminRole(sessUser.role)) {
+      return res
+        .status(403)
+        .send(
+          "A confirmação de pagamento e geração de recibo só pode ser feita pelo administrador.",
+        );
+    }
 
     const { codigoRecibo } = req.params;
-    const compra = await Compra.findOne({
-      codigoRecibo,
-      utilizadorId: sessId,
-    });
-    if (!compra)
+    const compra = await Compra.findOne({ codigoRecibo });
+    if (!compra) {
       return res.status(404).send("Pedido de pagamento não encontrado.");
+    }
 
-    const user = await User.findById(sessId);
-    if (!user) return res.redirect("/");
+    const user = await User.findById(compra.utilizadorId);
+    if (!user) {
+      return res.status(404).send("Utilizador da compra não encontrado.");
+    }
 
-    if (compra.status !== "confirmado") {
+    if (!compraConfirmadaPeloAdmin(compra)) {
       const agora = new Date();
       const baseData =
         user.statusSubscricao === "ativo" &&
@@ -523,13 +551,16 @@ async function confirmarPagamento(req, res) {
       );
 
       compra.status = "confirmado";
+      compra.confirmadoPorAdmin = true;
+      compra.confirmadoPorAdminId = sessUser.id;
       compra.confirmadoEm = agora;
       compra.validoAte = validoAte;
       await compra.save();
 
       user.statusSubscricao = "ativo";
       user.pagoAte = validoAte;
-      user.historicoCompras.push({
+
+      const registoRecibo = {
         codigoRecibo: compra.codigoRecibo,
         planoDias: compra.planoDias,
         nomePlano: compra.nomePlano,
@@ -541,38 +572,61 @@ async function confirmarPagamento(req, res) {
         referenciaPagamento: compra.referenciaPagamento,
         codigoPromocionalUsado: compra.codigoPromocionalUsado,
         status: "confirmado",
+        confirmadoPorAdmin: true,
         dataPagamento: agora,
         validoAte,
-      });
+      };
+
+      const indiceExistente = (user.historicoCompras || []).findIndex(
+        (c) => c.codigoRecibo === compra.codigoRecibo,
+      );
+      if (indiceExistente >= 0) {
+        user.historicoCompras[indiceExistente] = registoRecibo;
+      } else {
+        user.historicoCompras.push(registoRecibo);
+      }
       await user.save();
     }
 
     return res.redirect(`/recibo/${encodeURIComponent(compra.codigoRecibo)}`);
   } catch (erro) {
     console.error("Erro ao confirmar pagamento:", erro);
-    return res.redirect("/subscricao");
+    return res.redirect("/admin");
   }
 }
 
 async function verRecibo(req, res) {
   try {
-    const sessId = req.session?.utilizador?.id;
-    if (!sessId) return res.redirect("/");
+    const sessUser = req.session?.utilizador;
+    if (!sessUser || !sessUser.id) return res.redirect("/");
 
     const { codigoRecibo } = req.params;
-    const user = await User.findById(sessId);
+    const compraDb = await Compra.findOne({ codigoRecibo });
+    const donoOuAdmin =
+      compraDb &&
+      (String(compraDb.utilizadorId) === String(sessUser.id) ||
+        isAdminRole(sessUser.role));
+
+    if (!compraDb || !donoOuAdmin) {
+      return res
+        .status(403)
+        .send("Recibo indisponível ou sem permissão de acesso.");
+    }
+
+    if (!compraConfirmadaPeloAdmin(compraDb)) {
+      return res
+        .status(403)
+        .send(
+          "O recibo só fica disponível após a confirmação do pagamento pelo administrador.",
+        );
+    }
+
+    const user = await User.findById(compraDb.utilizadorId);
     if (!user) return res.redirect("/");
-
-    const compra =
-      (user.historicoCompras || []).find(
-        (c) => c.codigoRecibo === codigoRecibo,
-      ) || (await Compra.findOne({ codigoRecibo, utilizadorId: user._id }));
-
-    if (!compra) return res.status(404).send("Recibo não encontrado.");
 
     return res.render("recibo", {
       utilizador: user,
-      compra,
+      compra: compraDb,
     });
   } catch (erro) {
     console.error("Erro ao abrir recibo:", erro);
