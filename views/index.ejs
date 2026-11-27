@@ -3,418 +3,436 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AlphaTV | Entrar ou Criar Conta</title>
+  <title>AlphaTV | Entrar</title>
   <style>
     * { box-sizing: border-box; }
 
     body {
-      background-color: #050811;
-      color: #e2e8f0;
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 24px;
       min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    /* === ANIMAÇÃO DE TV AO FUNDO === */
-    .tv-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at 50% 35%, rgba(14, 165, 233, 0.14), rgba(5, 8, 17, 0.96) 72%),
-        repeating-linear-gradient(
-          to bottom,
-          rgba(56, 189, 248, 0.04) 0px,
-          rgba(56, 189, 248, 0.04) 2px,
-          transparent 2px,
-          transparent 5px
-        );
-    }
-
-    .tv-scanline {
-      position: absolute;
-      left: 0;
-      right: 0;
-      height: 120px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba(56, 189, 248, 0.08) 50%,
-        transparent 100%
-      );
-      animation: tvScan 7s linear infinite;
-    }
-
-    .tv-pulse-grid {
-      position: absolute;
-      inset: -20%;
-      background-image:
-        linear-gradient(to right, rgba(2, 132, 199, 0.07) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(2, 132, 199, 0.07) 1px, transparent 1px);
-      background-size: 48px 48px;
-      animation: tvDrift 16s ease-in-out infinite alternate;
-    }
-
-    .tv-signal-tag {
-      position: fixed;
-      bottom: 14px;
-      right: 18px;
-      z-index: 1;
-      pointer-events: none;
-      font-size: 0.75rem;
-      letter-spacing: 0.12em;
-      color: rgba(56, 189, 248, 0.55);
+      background: #07090e;
+      color: #f1f5f9;
+      font-family: Arial, Helvetica, sans-serif;
       display: flex;
       align-items: center;
-      gap: 7px;
-      text-transform: uppercase;
+      justify-content: center;
+      padding: 20px;
     }
 
-    .tv-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #38bdf8;
-      box-shadow: 0 0 10px #38bdf8;
-      animation: tvBlink 1.8s infinite;
-    }
-
-    @keyframes tvScan {
-      0% { transform: translateY(-160px); }
-      100% { transform: translateY(110vh); }
-    }
-
-    @keyframes tvDrift {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(-24px, -18px) scale(1.04); }
-    }
-
-    @keyframes tvBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.25; }
-    }
-
-    .conteudo-principal {
-      position: relative;
-      z-index: 1;
-    }
-
-    .topo {
-      max-width: 960px;
-      margin: 0 auto 22px auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .marca {
-      color: #38bdf8;
-      font-size: 1.5rem;
-      font-weight: bold;
-      text-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
-    }
-
-    .grid-acesso {
-      max-width: 960px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-    }
-
-    .card {
-      background: rgba(11, 19, 36, 0.92);
-      border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 22px;
-      box-shadow: 0 0 26px rgba(0, 180, 255, 0.12);
-      backdrop-filter: blur(4px);
-    }
-
-    h2 {
-      margin: 0 0 14px 0;
-      color: #38bdf8;
-      font-size: 1.2rem;
-    }
-
-    label {
-      display: block;
-      font-size: 0.85rem;
-      color: #94a3b8;
-      margin: 10px 0 4px 0;
-    }
-
-    input, select {
+    .auth-shell {
       width: 100%;
-      padding: 10px 12px;
-      border-radius: 6px;
-      border: 1px solid #334155;
-      background: #020617;
-      color: #f8fafc;
-      font-size: 0.92rem;
+      max-width: 410px;
     }
 
-    .grupo-telefone {
+    .auth-card {
+      background: #10141d;
+      border: 1px solid #1e2536;
+      border-radius: 16px;
+      padding: 32px 26px 26px 26px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+    }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .brand-logo {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #38bdf8;
+      margin: 0 0 8px 0;
+    }
+
+    .brand-subtitle {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+
+    .field-group {
+      margin-bottom: 14px;
+    }
+
+    .field-input,
+    .field-select {
+      width: 100%;
+      height: 46px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid #262f45;
+      background: #171c28;
+      color: #f8fafc;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .field-input:focus,
+    .field-select:focus {
+      border-color: #38bdf8;
+      background: #1b2232;
+    }
+
+    .phone-row {
       display: flex;
       gap: 8px;
-      align-items: center;
     }
 
-    .prefixo-pais {
-      background: #082f49;
-      color: #38bdf8;
+    .phone-prefix {
+      height: 46px;
+      padding: 0 12px;
+      border-radius: 10px;
+      background: #0b2436;
       border: 1px solid #0284c7;
-      border-radius: 6px;
-      padding: 10px 10px;
-      font-weight: bold;
+      color: #38bdf8;
+      font-weight: 700;
       font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
       white-space: nowrap;
     }
 
-    .dica-pais {
+    .field-hint {
+      margin-top: 5px;
       font-size: 0.78rem;
       color: #94a3b8;
-      margin-top: 4px;
     }
 
-    .btn {
-      margin-top: 16px;
+    .btn-primary {
       width: 100%;
-      background: #0284c7;
-      color: #ffffff;
+      height: 46px;
+      margin-top: 6px;
       border: none;
-      padding: 11px 14px;
-      border-radius: 6px;
+      border-radius: 10px;
+      background: #ef4444;
+      color: #ffffff;
       font-size: 0.95rem;
-      font-weight: bold;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       cursor: pointer;
+      transition: background-color 0.15s ease;
     }
 
-    .btn:hover { background: #0ea5e9; }
-
-    .btn-secundario {
-      margin-top: 10px;
-      background: #0f172a;
-      color: #38bdf8;
-      border: 1px solid #0284c7;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: bold;
-      cursor: pointer;
+    .btn-primary:hover {
+      background: #f87171;
     }
 
-    .btn-secundario:hover {
-      background: #082f49;
-    }
-
-    .barra-recuperar {
+    .btn-install {
+      width: 100%;
+      height: 44px;
       margin-top: 14px;
+      border-radius: 10px;
+      border: 1px solid #262f45;
+      background: #171c28;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      font-size: 0.88rem;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
     }
 
-    .link-recuperar {
-      color: #38bdf8;
-      text-decoration: underline;
-      cursor: pointer;
+    .btn-install:hover {
+      background: #1f2636;
+      border-color: #38bdf8;
+    }
+
+    .auth-footer-links {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.86rem;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .link-btn {
       background: none;
       border: none;
       padding: 0;
-      font-size: 0.88rem;
-      font-weight: bold;
+      color: #38bdf8;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
     }
 
-    .painel-recuperacao {
-      max-width: 960px;
-      margin: 20px auto 0 auto;
+    .link-btn:hover {
+      text-decoration: underline;
+    }
+
+    .box-switch {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #1e2536;
+    }
+
+    .box-switch.visivel {
+      display: block;
+    }
+
+    .qr-panel {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid #1e2536;
       display: none;
     }
 
-    .painel-recuperacao.visivel { display: block; }
-
-    .qr-box {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-      background: #020617;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      padding: 16px;
-      margin-top: 12px;
+    .qr-panel.visivel {
+      display: block;
     }
 
-    .qr-canvas-wrap {
+    .qr-card {
+      background: #151a26;
+      border: 1px solid #242d42;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .qr-frame {
       background: #ffffff;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 10px;
+      border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      margin-bottom: 12px;
     }
 
-    .qr-meta {
-      flex: 1;
-      min-width: 240px;
-      font-size: 0.88rem;
+    .qr-details {
+      font-size: 0.85rem;
       line-height: 1.5;
+      color: #cbd5e1;
+      text-align: left;
     }
 
-    .alerta-erro {
-      max-width: 960px;
-      margin: 0 auto 14px auto;
-      background: #7f1d1d;
-      color: #fecaca;
-      border: 1px solid #dc2626;
-      padding: 12px 16px;
+    .btn-read-qr {
+      width: 100%;
+      margin-top: 10px;
+      height: 38px;
       border-radius: 8px;
+      border: 1px solid #0284c7;
+      background: #0b2436;
+      color: #38bdf8;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-read-qr:hover {
+      background: #0f3550;
+    }
+
+    .alert-error {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(127, 29, 29, 0.45);
+      border: 1px solid #dc2626;
+      color: #fecaca;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    .alert-info {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #bae6fd;
+      font-size: 0.82rem;
+      text-align: center;
+      display: none;
     }
   </style>
   <script src="/js/qrcode.min.js"></script>
 </head>
 <body>
-  <div class="tv-bg" aria-hidden="true">
-    <div class="tv-pulse-grid"></div>
-    <div class="tv-scanline"></div>
-  </div>
-  <div class="tv-signal-tag" aria-hidden="true">
-    <span class="tv-dot"></span>
-    <span>ALPHATV • TV SIGNAL ACTIVE</span>
-  </div>
+  <%
+    const qrObj = (typeof qrDados !== "undefined" && qrDados) ? qrDados : null;
+    const mostrarQrInicial = Boolean(typeof abrirQrInicial !== "undefined" && abrirQrInicial && qrObj);
+  %>
 
-  <div class="conteudo-principal">
-    <%
-      const qrObj = (typeof qrDados !== "undefined" && qrDados) ? qrDados : null;
-      const mostrarQrInicial = Boolean(typeof abrirQrInicial !== "undefined" && abrirQrInicial && qrObj);
-    %>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <header class="brand-header">
+        <h1 class="brand-logo">AlphaTV</h1>
+        <p class="brand-subtitle">Entre para acessar o conteúdo</p>
+      </header>
 
-    <div class="topo">
-      <div class="marca">AlphaTV</div>
-      <div style="font-size: 0.86rem; color: #94a3b8;">7 dias gratuitos • Dados em QR Code no Logout</div>
-    </div>
+      <% if (typeof erro !== "undefined" && erro) { %>
+        <div class="alert-error"><%= erro %></div>
+      <% } %>
 
-    <% if (typeof erro !== "undefined" && erro) { %>
-      <div class="alerta-erro"><%= erro %></div>
-    <% } %>
-
-    <div class="grid-acesso">
-      <div class="card">
-        <h2>Entrar no AlphaTV</h2>
+      <!-- FORMULÁRIO PRINCIPAL DE LOGIN -->
+      <div id="viewLogin">
         <form action="/login" method="POST">
-          <label for="loginEmail">O teu e-mail</label>
-          <input
-            type="email"
-            id="loginEmail"
-            name="email"
-            placeholder="O teu e-mail"
-            value="<%= qrObj && qrObj.email ? qrObj.email : '' %>"
-            required
-          />
-
-          <label for="loginPassword">Palavra-passe</label>
-          <input
-            type="password"
-            id="loginPassword"
-            name="password"
-            placeholder="Palavra-passe"
-            required
-          />
-
-          <button type="submit" class="btn">Entrar</button>
-        </form>
-
-        <div class="barra-recuperar">
-          <span style="color:#94a3b8;">Ver dados / QR da conta?</span>
-          <button type="button" class="link-recuperar" onclick="alternarRecuperacao(true)">
-            Recuperar acesso
-          </button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Criar Conta</h2>
-        <form action="/cadastrar" method="POST">
-          <label for="cadNome">Nome completo</label>
-          <input type="text" id="cadNome" name="nome" placeholder="Nome completo" required />
-
-          <label for="cadEmail">E-mail</label>
-          <input type="email" id="cadEmail" name="email" placeholder="E-mail" required />
-
-          <label for="cadPassword">Criar palavra-passe</label>
-          <input type="password" id="cadPassword" name="password" placeholder="Criar palavra-passe" required />
-
-          <label for="cadPais">País de origem / instalação</label>
-          <select id="cadPais" name="pais" onchange="configurarCampoTelefone('cad')">
-            <option value="PT">Portugal (+351)</option>
-            <option value="BR">Brasil (+55)</option>
-            <option value="OUTROS">Outros países (Internacional)</option>
-          </select>
-
-          <label for="cadTelefone">Telefone de contacto</label>
-          <div class="grupo-telefone">
-            <span id="cadPrefixo" class="prefixo-pais">+351</span>
-            <input type="text" id="cadTelefone" name="telefone" placeholder="Ex: 912345678" required />
+          <div class="field-group">
+            <input
+              type="email"
+              id="loginEmail"
+              name="email"
+              class="field-input"
+              placeholder="Usuário (e-mail)"
+              value="<%= qrObj && qrObj.email ? qrObj.email : '' %>"
+              required
+            />
           </div>
-          <div id="cadDica" class="dica-pais">Portugal: 9 dígitos (ex: 912345678).</div>
 
-          <label for="cadConvite">Código promocional de convite (opcional)</label>
-          <input type="text" id="cadConvite" name="codigoConvite" placeholder="Código de 4 dígitos (se tiver)" />
+          <div class="field-group">
+            <input
+              type="password"
+              id="loginPassword"
+              name="password"
+              class="field-input"
+              placeholder="••••••••"
+              required
+            />
+          </div>
 
-          <button type="submit" class="btn">Registar e Assistir</button>
+          <button type="submit" class="btn-primary">ENTRAR</button>
         </form>
-      </div>
-    </div>
 
-    <div id="painelRecuperacao" class="card painel-recuperacao <%= mostrarQrInicial ? 'visivel' : '' %>">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <h2 style="margin:0;">Recuperar acesso • QR Code da Conta</h2>
-        <button type="button" class="link-recuperar" onclick="alternarRecuperacao(false)">Ocultar</button>
-      </div>
-
-      <div id="qrConteudoAtivo" class="qr-box" style="<%= qrObj ? '' : 'display:none;' %>">
-        <div class="qr-canvas-wrap">
-          <canvas id="qrCanvas" width="220" height="220"></canvas>
-        </div>
-        <div class="qr-meta" id="qrDetalhesLista">
-          <div><strong>A aguardar leitura do QR Code</strong></div>
-          <p style="color:#94a3b8; margin:6px 0 0 0;">
-            Leia este QR Code com a câmara do telemóvel ou clique em <strong>Ler QR Code</strong> para extrair o link de redefinição de senha.
-          </p>
-          <button type="button" class="btn-secundario" onclick="lerQrCodeAtual()">
-            Ler QR Code
-          </button>
+        <div class="auth-footer-links">
+          <div>
+            Não tem conta?
+            <button type="button" class="link-btn" onclick="alternarVista('cadastro')">Cadastre-se</button>
+          </div>
+          <div>
+            <button type="button" class="link-btn" onclick="alternarQr(true)">
+              Recuperar senha via QR Code
+            </button>
+          </div>
         </div>
       </div>
 
-      <p id="qrSemDadosMsg" style="color:#94a3b8; margin-top:10px; <%= qrObj ? 'display:none;' : '' %>">
-        Inicia sessão e faz <strong>Logout</strong> para gerar o <strong>QR Code</strong> com os dados da conta.
-      </p>
-    </div>
-  </div>
+      <!-- FORMULÁRIO DE CADASTRO (OCULTO ATÉ CLICAR EM CADASTRE-SE) -->
+      <div id="viewCadastro" class="box-switch">
+        <form action="/cadastrar" method="POST">
+          <div class="field-group">
+            <input type="text" id="cadNome" name="nome" class="field-input" placeholder="Nome completo" required />
+          </div>
+
+          <div class="field-group">
+            <input type="email" id="cadEmail" name="email" class="field-input" placeholder="E-mail" required />
+          </div>
+
+          <div class="field-group">
+            <input type="password" id="cadPassword" name="password" class="field-input" placeholder="Criar palavra-passe" required />
+          </div>
+
+          <div class="field-group">
+            <select id="cadPais" name="pais" class="field-select" onchange="configurarCampoTelefone('cad')">
+              <option value="PT">Portugal (+351)</option>
+              <option value="BR">Brasil (+55)</option>
+              <option value="OUTROS">Outros países (Internacional)</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <div class="phone-row">
+              <span id="cadPrefixo" class="phone-prefix">+351</span>
+              <input type="text" id="cadTelefone" name="telefone" class="field-input" placeholder="Ex: 912345678" required />
+            </div>
+            <div id="cadDica" class="field-hint">Portugal: 9 dígitos (ex: 912345678).</div>
+          </div>
+
+          <div class="field-group">
+            <input type="text" id="cadConvite" name="codigoConvite" class="field-input" placeholder="Código promocional de convite (opcional)" />
+          </div>
+
+          <button type="submit" class="btn-primary">CRIAR CONTA</button>
+        </form>
+
+        <div class="auth-footer-links">
+          <button type="button" class="link-btn" onclick="alternarVista('login')">Voltar ao login</button>
+        </div>
+      </div>
+
+      <!-- BOTÃO INSTALAR APLICATIVO -->
+      <button type="button" id="btnInstalarApp" class="btn-install" onclick="instalarAplicativo()">
+        <span>&#8681;</span>
+        <span>Instalar aplicativo</span>
+      </button>
+      <div id="avisoInstalar" class="alert-info"></div>
+
+      <!-- PAINEL QR CODE DE RECUPERAÇÃO -->
+      <div id="painelRecuperacao" class="qr-panel <%= mostrarQrInicial ? 'visivel' : '' %>">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:0.88rem; font-weight:700; color:#38bdf8;">QR Code da Conta</span>
+          <button type="button" class="link-btn" onclick="alternarQr(false)">Ocultar</button>
+        </div>
+
+        <div id="qrConteudoAtivo" class="qr-card" style="<%= qrObj ? '' : 'display:none;' %>">
+          <div class="qr-frame">
+            <canvas id="qrCanvas" width="200" height="200"></canvas>
+          </div>
+          <div id="qrDetalhesLista" class="qr-details">
+            <div><strong>A aguardar leitura do QR Code</strong></div>
+            <p style="color:#94a3b8; margin:6px 0 0 0;">
+              Leia este QR Code com o telemóvel ou clique em <strong>Ler QR Code</strong> para obter o link de redefinição.
+            </p>
+            <button type="button" class="btn-read-qr" onclick="lerQrCodeAtual()">Ler QR Code</button>
+          </div>
+        </div>
+
+        <p id="qrSemDadosMsg" style="color:#94a3b8; font-size:0.84rem; text-align:center; margin:8px 0 0 0; <%= qrObj ? 'display:none;' : '' %>">
+          Inicia sessão e faz <strong>Logout</strong> para gerar o QR Code de recuperação.
+        </p>
+      </div>
+    </section>
+  </main>
 
   <script>
     let ultimoPayloadQrTexto = "";
     let ultimoDadosQr = null;
+    let deferredPrompt = null;
 
-    function escaparHtml(valor) {
-      return String(valor || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+    window.addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    function instalarAplicativo() {
+      const aviso = document.getElementById("avisoInstalar");
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.finally(function () {
+          deferredPrompt = null;
+        });
+        return;
+      }
+      if (aviso) {
+        aviso.style.display = "block";
+        aviso.textContent = "Para instalar no dispositivo, use o menu do navegador (\"Adicionar ao ecrã principal\" / \"Instalar aplicação\").";
+      }
     }
 
-    function alternarRecuperacao(mostrar) {
+    function alternarVista(vista) {
+      const loginBox = document.getElementById("viewLogin");
+      const cadBox = document.getElementById("viewCadastro");
+      if (!loginBox || !cadBox) return;
+
+      if (vista === "cadastro") {
+        loginBox.style.display = "none";
+        cadBox.classList.add("visivel");
+      } else {
+        cadBox.classList.remove("visivel");
+        loginBox.style.display = "block";
+      }
+    }
+
+    function alternarQr(mostrar) {
       const painel = document.getElementById("painelRecuperacao");
       if (!painel) return;
       if (mostrar) {
@@ -447,38 +465,31 @@
       }
     }
 
-    function extrairDadosDaLeituraQr(textoLido, dadosOriginais) {
-      const textoLimpo = String(textoLido || "").trim();
-      let emailLido = (dadosOriginais && dadosOriginais.email) || "";
-      let tokenLido = (dadosOriginais && dadosOriginais.token) || "";
+    function escaparHtml(valor) {
+      return String(valor || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
 
-      try {
-        const parsedUrl = new URL(textoLimpo);
-        const qEmail = parsedUrl.searchParams.get("email");
-        const qToken = parsedUrl.searchParams.get("token");
-        if (qEmail) emailLido = qEmail;
-        if (qToken) tokenLido = qToken;
-      } catch (e) {}
+    function mostrarEstadoAguardandoLeitura(erroMsg) {
+      const detalhesEl = document.getElementById("qrDetalhesLista");
+      if (!detalhesEl) return;
 
-      return {
-        url: textoLimpo,
-        email: emailLido,
-        token: tokenLido,
-        expiraEm: (dadosOriginais && dadosOriginais.expiraEm) || "30 minutos",
-      };
+      const msg = erroMsg
+        ? "<p style=\"color:#f87171; margin:6px 0 0 0;\">" + escaparHtml(erroMsg) + "</p>"
+        : "<p style=\"color:#94a3b8; margin:6px 0 0 0;\">Leia este QR Code com o telemóvel ou clique em <strong>Ler QR Code</strong> para obter o link de redefinição.</p>";
+
+      detalhesEl.innerHTML =
+        "<div><strong>A aguardar leitura do QR Code</strong></div>" +
+        msg +
+        "<button type=\"button\" class=\"btn-read-qr\" onclick=\"lerQrCodeAtual()\">Ler QR Code</button>";
     }
 
     function atualizarDetalhesAposLeitura(leitura) {
       const detalhesEl = document.getElementById("qrDetalhesLista");
       if (!detalhesEl) return;
-
-      if (!leitura || !leitura.url) {
-        detalhesEl.innerHTML =
-          "<div><strong>QR Code sem conteúdo válido</strong></div>" +
-          "<p style=\"color:#94a3b8; margin:6px 0 0 0;\">Faça logout numa conta para gerar um QR Code de redefinição de senha.</p>" +
-          "<button type=\"button\" class=\"btn-secundario\" onclick=\"lerQrCodeAtual()\">Ler QR Code</button>";
-        return;
-      }
 
       const emailEscapado = escaparHtml(leitura.email || "Conta");
       const expiraEscapado = escaparHtml(leitura.expiraEm || "30 minutos");
@@ -486,34 +497,64 @@
 
       detalhesEl.innerHTML =
         "<div><strong>Leitura do QR Code • Redefinir Senha</strong></div>" +
-        "<div style=\"margin-top:6px;\"><strong>Conta lida:</strong> " + emailEscapado + "</div>" +
-        "<div><strong>Validade do link:</strong> " + expiraEscapado + "</div>" +
-        "<p style=\"color:#94a3b8; margin:8px 0 0 0;\">" +
-        "Conteúdo obtido a partir do QR Code. Abra o link abaixo no telemóvel ou navegador para definir a nova senha." +
-        "</p>" +
+        "<div style=\"margin-top:6px;\"><strong>Conta:</strong> " + emailEscapado + "</div>" +
+        "<div><strong>Validade:</strong> " + expiraEscapado + "</div>" +
         "<div style=\"margin-top:8px;\">" +
-        "<a href=\"" + urlEscapado + "\" style=\"color:#38bdf8; word-break:break-all; font-size:0.82rem;\">" +
+        "<a href=\"" + urlEscapado + "\" style=\"color:#38bdf8; word-break:break-all; font-size:0.8rem;\">" +
         urlEscapado +
         "</a>" +
         "</div>" +
-        "<button type=\"button\" class=\"btn-secundario\" onclick=\"lerQrCodeAtual()\">Ler QR Code novamente</button>";
+        "<button type=\"button\" class=\"btn-read-qr\" onclick=\"lerQrCodeAtual()\">Ler QR Code novamente</button>";
     }
 
-    function lerQrCodeAtual() {
+    async function lerCanvasComDetector(canvas) {
+      if (typeof window.BarcodeDetector !== "function" || !canvas) {
+        return null;
+      }
+      try {
+        const formatos = await window.BarcodeDetector.getSupportedFormats();
+        if (!Array.isArray(formatos) || !formatos.includes("qr_code")) {
+          return null;
+        }
+        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        const resultados = await detector.detect(canvas);
+        if (Array.isArray(resultados) && resultados.length > 0 && resultados[0].rawValue) {
+          return String(resultados[0].rawValue).trim();
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    async function lerQrCodeAtual() {
       const qrCanvas = document.getElementById("qrCanvas");
       if (!qrCanvas || !ultimoPayloadQrTexto) {
-        atualizarDetalhesAposLeitura(null);
+        mostrarEstadoAguardandoLeitura("Nenhum QR Code ativo para ler.");
         return;
       }
 
-      // Garante que o canvas está desenhado antes da leitura
-      desenharQrNoCanvas(qrCanvas, ultimoPayloadQrTexto, function () {
-        const leitura = extrairDadosDaLeituraQr(ultimoPayloadQrTexto, ultimoDadosQr);
-        atualizarDetalhesAposLeitura(leitura);
+      const valorDetectado = await lerCanvasComDetector(qrCanvas);
+      const textoFinal = valorDetectado || ultimoPayloadQrTexto;
+
+      let emailLido = (ultimoDadosQr && ultimoDadosQr.email) || "";
+      let tokenLido = (ultimoDadosQr && ultimoDadosQr.token) || "";
+
+      try {
+        const parsedUrl = new URL(textoFinal);
+        const qEmail = parsedUrl.searchParams.get("email");
+        const qToken = parsedUrl.searchParams.get("token");
+        if (qEmail) emailLido = qEmail;
+        if (qToken) tokenLido = qToken;
+      } catch (e) {}
+
+      atualizarDetalhesAposLeitura({
+        url: textoFinal,
+        email: emailLido,
+        token: tokenLido,
+        expiraEm: (ultimoDadosQr && ultimoDadosQr.expiraEm) || "30 minutos",
       });
     }
 
-    function desenharQrNoCanvas(canvas, texto, aoConcluir) {
+    function desenharQrNoCanvas(canvas, texto) {
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -532,25 +573,14 @@
               width: canvas.width,
               margin: 2,
               errorCorrectionLevel: "M",
-              color: {
-                dark: "#000000",
-                light: "#ffffff",
-              },
+              color: { dark: "#000000", light: "#ffffff" },
             },
             function (err) {
-              if (err) {
-                console.error("Erro ao gerar QR Code:", err);
-                return;
-              }
-              if (typeof aoConcluir === "function") {
-                aoConcluir();
-              }
+              if (err) console.error("Erro ao gerar QR Code:", err);
             }
           );
         } else if (tentativas < 25) {
           setTimeout(() => tentarDesenhar(tentativas + 1), 100);
-        } else {
-          console.error("Biblioteca QRCode não carregada de /js/qrcode.min.js");
         }
       };
 
@@ -571,16 +601,12 @@
         encodeURIComponent(dados.email) +
         (dados.token ? "&token=" + encodeURIComponent(dados.token) : "");
 
-      const urlRecuperacao = dados.qrUrl || baseRecuperacao;
-      ultimoPayloadQrTexto = urlRecuperacao;
+      ultimoPayloadQrTexto = dados.qrUrl || baseRecuperacao;
 
       if (msgSemDados) msgSemDados.style.display = "none";
-      boxAtivo.style.display = "flex";
-
-      desenharQrNoCanvas(qrCanvas, ultimoPayloadQrTexto, function () {
-        const leitura = extrairDadosDaLeituraQr(ultimoPayloadQrTexto, ultimoDadosQr);
-        atualizarDetalhesAposLeitura(leitura);
-      });
+      boxAtivo.style.display = "block";
+      mostrarEstadoAguardandoLeitura();
+      desenharQrNoCanvas(qrCanvas, ultimoPayloadQrTexto);
 
       const loginEmailInput = document.getElementById("loginEmail");
       if (loginEmailInput && !loginEmailInput.value) {
