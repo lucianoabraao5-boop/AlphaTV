@@ -5,152 +5,703 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AlphaTV | Área do Utilizador</title>
   <style>
-    body { background: #070b14; color: #e2e8f0; font-family: Arial, sans-serif; margin: 0; }
-    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: #0f172a; border-bottom: 1px solid #1e293b; padding: 14px 24px; }
-    .marca { color: #38bdf8; font-size: 1.25rem; font-weight: bold; }
-    .btn, a.btn { background: #0284c7; color: #fff; text-decoration: none; border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.88rem; cursor: pointer; font-weight: bold; }
-    .btn:hover, a.btn:hover { background: #0ea5e9; }
-    .btn-sair { background: #7f1d1d; }
-    main { max-width: 1100px; margin: 22px auto; padding: 0 20px; display: grid; gap: 20px; }
-    .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; }
-    .banner-trial { background: #082f49; border: 1px solid #0284c7; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    video { width: 100%; max-height: 460px; background: #000; border-radius: 8px; border: 1px solid #1e293b; }
-    .barra-admin-link { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-    .barra-admin-link input { flex: 1; min-width: 240px; padding: 10px 12px; border-radius: 6px; border: 1px solid #334155; background: #020617; color: #f8fafc; }
-    .grid-perfil { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #1e293b; font-size: 0.85rem; }
-    .chat-box { background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; max-height: 170px; overflow-y: auto; margin-bottom: 10px; font-size: 0.88rem; }
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #050811;
+      color: #e2e8f0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* === BARRA SUPERIOR DE NAVEGAÇÃO === */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(8, 14, 28, 0.96);
+      border-bottom: 1px solid #1e293b;
+      backdrop-filter: blur(8px);
+      padding: 10px 18px;
+    }
+
+    .topbar-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      color: #38bdf8;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn,
+    .nav-link {
+      background: #0b1324;
+      color: #cbd5e1;
+      border: 1px solid #1e293b;
+      border-radius: 7px;
+      padding: 7px 12px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover,
+    .nav-link:hover,
+    .nav-btn.ativo {
+      background: #082f49;
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    .nav-sair {
+      background: #1f1218;
+      border-color: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .nav-sair:hover {
+      background: #7f1d1d;
+      color: #ffffff;
+    }
+
+    /* === GAVETA DE SECÇÕES (CÓDIGO, COMPRAS, SUPORTE, PLANOS, FATURAS) === */
+    .drawer-container {
+      max-width: 1360px;
+      margin: 14px auto 0 auto;
+      padding: 0 18px;
+      display: none;
+    }
+
+    .drawer-container.visivel {
+      display: block;
+    }
+
+    .drawer-card {
+      background: #0b1324;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .drawer-title {
+      margin: 0;
+      color: #38bdf8;
+      font-size: 1.05rem;
+    }
+
+    .btn-fechar {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .btn-fechar:hover {
+      color: #f8fafc;
+      border-color: #38bdf8;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.ativo {
+      display: block;
+    }
+
+    /* === ÁREA PRINCIPAL: LEITOR + LISTA DE CANAIS LADO A LADO === */
+    .main-stage {
+      max-width: 1360px;
+      margin: 16px auto 28px auto;
+      padding: 0 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .main-stage {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: #0b1324;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 0 24px rgba(2, 132, 199, 0.12);
+    }
+
+    .panel-title {
+      margin: 0 0 12px 0;
+      color: #38bdf8;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .canal-atual-label {
+      font-size: 0.84rem;
+      color: #94a3b8;
+      font-weight: normal;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 65%;
+    }
+
+    .video-wrap {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #000000;
+    }
+
+    .search-canal {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 7px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #f8fafc;
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+      outline: none;
+    }
+
+    .search-canal:focus {
+      border-color: #38bdf8;
+    }
+
+    .lista-canais {
+      max-height: 460px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    .canal-item {
+      width: 100%;
+      text-align: left;
+      background: #060b16;
+      color: #e2e8f0;
+      border: 1px solid #1e293b;
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .canal-item:hover {
+      border-color: #0284c7;
+      background: #0a162c;
+    }
+
+    .canal-item.ativo {
+      background: #082f49;
+      border-color: #38bdf8;
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .canal-tag {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 5px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    /* === ESTILOS INTERNOS DAS SECÇÕES DA BARRA NAV === */
+    .btn-acao {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 7px;
+      padding: 9px 14px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .btn-acao:hover {
+      background: #0ea5e9;
+    }
+
+    .promo-badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: #082f49;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+    }
+
+    .support-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .support-box {
+      background: #060b16;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .chat-log {
+      min-height: 70px;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 7px;
+      padding: 10px;
+      font-size: 0.84rem;
+      margin-bottom: 8px;
+    }
+
+    .chat-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 7px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #f8fafc;
+      font-size: 0.85rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    th {
+      color: #94a3b8;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
   <%
-    const isAdmin = utilizador && String(utilizador.role || "").toLowerCase() === "administrador";
-    const promoLiberado = Boolean(utilizador && utilizador.codigoPromocionalLiberado);
+    const listaCanaisSafe = (typeof canais !== "undefined" && Array.isArray(canais)) ? canais : [];
+    const comprasSafe = (typeof historicoCompras !== "undefined" && Array.isArray(historicoCompras))
+      ? [...historicoCompras].reverse()
+      : [];
+    const codigoPromoAtivo = (typeof utilizador !== "undefined" && utilizador && utilizador.codigoPromocionalLiberado && utilizador.codigoPromocional)
+      ? utilizador.codigoPromocional
+      : null;
   %>
 
-  <header>
-    <div class="marca">AlphaTV</div>
-    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-      <span>Olá, <strong><%= utilizador ? utilizador.nome : "Utilizador" %></strong></span>
-      <% if (isAdmin) { %>
-        <a href="/admin" class="btn">Dashboard Admin</a>
-      <% } else { %>
-        <a href="/subscricao" class="btn">Planos / Histórico</a>
-      <% } %>
-      <a href="/logout" class="btn btn-sair">Sair</a>
-    </div>
-  </header>
+  <!-- BARRA DE NAVEGAÇÃO -->
+  <nav class="topbar" aria-label="Menu principal">
+    <div class="topbar-inner">
+      <a href="/player" class="brand">AlphaTV</a>
 
-  <main>
-    <% if (!isAdmin && typeof acessoInfo !== "undefined" && acessoInfo && acessoInfo.emTeste) { %>
-      <div class="banner-trial">
-        <span>Período gratuito de 7 dias ativo: restam <strong><%= acessoInfo.diasRestantes %> dia(s)</strong> antes da subscrição.</span>
-        <a href="/subscricao" class="btn">Ver Planos (30 a 180 dias)</a>
-      </div>
-    <% } %>
-
-    <div class="card">
-      <h2 style="margin-top:0; color:#38bdf8;">Conteúdo Interno</h2>
-      <video id="videoPlayer" controls preload="metadata"></video>
-
-      <% if (isAdmin) { %>
-        <div class="barra-admin-link">
-          <input type="text" id="inputLinkVideo" placeholder="Área Admin: cola aqui um link de vídeo (.mp4 ou .m3u8)..." />
-          <button type="button" class="btn" onclick="reproduzirLink()">Reproduzir</button>
-        </div>
-      <% } %>
-    </div>
-
-    <div class="grid-perfil">
-      <div class="card">
-  <h3 style="margin-top:0; color:#38bdf8;">Código Promocional para Convidar</h3>
-  <% if (utilizador && utilizador.codigoPromocionalLiberado && utilizador.codigoPromocional) { %>
-    <p>Código disponibilizado pelo administrador (4 dígitos):</p>
-    <div style="background:#020617; border:1px solid #38bdf8; padding:10px; border-radius:6px; font-weight:bold; font-size:1.25rem; letter-spacing:3px; color:#38bdf8; text-align:center;">
-      <%= utilizador.codigoPromocional %>
-    </div>
-    <p style="font-size:0.85rem; color:#94a3b8; margin-top:8px;">
-      Convites registados: <strong><%= utilizador.convitesRealizados || 0 %></strong>
-    </p>
-    <form action="/convite/gerar" method="POST" style="margin-top:10px;">
-      <button type="submit" class="btn">Gerar Novo Código (4 dígitos)</button>
-    </form>
-  <% } else { %>
-    <p style="color:#94a3b8;">
-      Nenhum código promocional disponível no momento. Fica visível apenas quando disponibilizado pelo administrador.
-    </p>
-  <% } %>
-</div>
-
-      <div class="card">
-        <h3 style="margin-top:0; color:#38bdf8;">Suporte Técnico (WhatsApp, Telegram e Chat Direto)</h3>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-          <a href="https://wa.me/351900000000?text=Ol%C3%A1%20suporte%20AlphaTV" target="_blank" rel="noopener" class="btn">WhatsApp</a>
-          <a href="https://t.me/AlphaTVSuporte" target="_blank" rel="noopener" class="btn">Telegram</a>
-        </div>
-        <div id="chatMensagens" class="chat-box">
-          <div><strong>Suporte AlphaTV:</strong> Olá! Em que podemos ajudar?</div>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="inputChatSuporte" placeholder="Escreve a tua mensagem..." style="flex:1; padding:8px 10px; border-radius:6px; border:1px solid #334155; background:#020617; color:#fff;" />
-          <button type="button" class="btn" onclick="enviarChatDireto()">Enviar</button>
-        </div>
+      <div class="nav-menu">
+        <button type="button" class="nav-btn" data-tab="codigo" onclick="abrirSecao('codigo')">
+          Código Promocional
+        </button>
+        <button type="button" class="nav-btn" data-tab="compras" onclick="abrirSecao('compras')">
+          Histórico de Compras
+        </button>
+        <button type="button" class="nav-btn" data-tab="suporte" onclick="abrirSecao('suporte')">
+          Suporte Técnico
+        </button>
+        <a href="/subscricao" class="nav-link">Planos</a>
+        <button type="button" class="nav-btn" data-tab="faturas" onclick="abrirSecao('faturas')">
+          Faturas
+        </button>
+        <a href="/logout" class="nav-link nav-sair">Logout</a>
       </div>
     </div>
+  </nav>
 
-    <div class="card">
-      <h3 style="margin-top:0; color:#38bdf8;">Histórico de Compras no Perfil</h3>
-      <% if (!historicoCompras || historicoCompras.length === 0) { %>
-        <p style="color:#94a3b8;">Nenhuma compra confirmada até ao momento.</p>
-      <% } else { %>
-        <div style="overflow-x:auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>Recibo</th>
-                <th>Plano</th>
-                <th>Valor</th>
-                <th>Válido Até</th>
-                <th>Recibo</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% historicoCompras.forEach(function(c) { %>
+  <!-- GAVETA DE CONTEÚDO DAS OPÇÕES DA BARRA NAV -->
+  <section id="drawerSecoes" class="drawer-container" aria-live="polite">
+    <div class="drawer-card">
+      <div class="drawer-header">
+        <h2 id="drawerTitulo" class="drawer-title">Detalhes</h2>
+        <button type="button" class="btn-fechar" onclick="fecharSecoes()">Fechar</button>
+      </div>
+
+      <!-- 1. CÓDIGO PROMOCIONAL -->
+      <div id="pane-codigo" class="tab-pane">
+        <% if (codigoPromoAtivo) { %>
+          <p style="margin:0; color:#cbd5e1; font-size:0.88rem;">
+            Partilha o teu código promocional de 4 dígitos para convidar novos utilizadores:
+          </p>
+          <div class="promo-badge"><%= codigoPromoAtivo %></div>
+        <% } else { %>
+          <p style="margin:0; color:#94a3b8; font-size:0.88rem;">
+            Nenhum código promocional disponível no momento. Fica visível apenas quando disponibilizado pelo administrador.
+          </p>
+        <% } %>
+      </div>
+
+      <!-- 2. HISTÓRICO DE COMPRAS -->
+      <div id="pane-compras" class="tab-pane">
+        <% if (comprasSafe.length === 0) { %>
+          <p style="margin:0; color:#94a3b8; font-size:0.88rem;">Ainda não existem compras registadas nesta conta.</p>
+        <% } else { %>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
                 <tr>
-                  <td><%= c.codigoRecibo %></td>
-                  <td><%= c.nomePlano %></td>
-                  <td><%= Number(c.valorFinal).toFixed(2) %> <%= c.moeda || "EUR" %></td>
-                  <td><%= new Date(c.validoAte).toLocaleDateString("pt-PT") %></td>
-                  <td><a href="/recibo/<%= encodeURIComponent(c.codigoRecibo) %>" class="btn">Abrir</a></td>
+                  <th>Recibo</th>
+                  <th>Plano</th>
+                  <th>Valor</th>
+                  <th>Válido Até</th>
+                  <th>Recibo</th>
                 </tr>
-              <% }); %>
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                <% comprasSafe.forEach(function(item) { %>
+                  <tr>
+                    <td><%= item.codigoRecibo || "-" %></td>
+                    <td><%= item.nomePlano || (item.planoDias ? item.planoDias + " dias" : "Subscrição") %></td>
+                    <td><%= item.valorFinal !== undefined ? item.valorFinal : (item.valorBase || "-") %> <%= item.moeda || "EUR" %></td>
+                    <td><%= item.validoAte ? new Date(item.validoAte).toLocaleDateString("pt-PT") : "-" %></td>
+                    <td>
+                      <% if (item.codigoRecibo) { %>
+                        <a href="/recibo/<%= encodeURIComponent(item.codigoRecibo) %>" class="btn-acao">Abrir</a>
+                      <% } else { %>
+                        -
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- 3. SUPORTE TÉCNICO -->
+      <div id="pane-suporte" class="tab-pane">
+        <div class="support-grid">
+          <div class="support-box">
+            <div style="font-weight:700; color:#38bdf8; margin-bottom:8px;">Canais Diretos</div>
+            <p style="margin:0 0 12px 0; font-size:0.84rem; color:#94a3b8;">
+              Fala com a equipa de suporte técnico para apoio na reprodução, lista de canais ou conta.
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <a href="https://wa.me/" target="_blank" rel="noopener" class="btn-acao">WhatsApp</a>
+              <a href="https://t.me/" target="_blank" rel="noopener" class="btn-acao" style="background:#0369a1;">Telegram</a>
+            </div>
+          </div>
+
+          <div class="support-box">
+            <div style="font-weight:700; color:#38bdf8; margin-bottom:8px;">Chat Direto</div>
+            <div id="chatLog" class="chat-log">
+              <div><strong style="color:#38bdf8;">Suporte AlphaTV:</strong> Olá! Em que podemos ajudar?</div>
+            </div>
+            <form class="chat-row" onsubmit="enviarMensagemSuporte(event)">
+              <input id="chatInput" type="text" class="chat-input" placeholder="Escreve a tua mensagem..." required />
+              <button type="submit" class="btn-acao">Enviar</button>
+            </form>
+          </div>
         </div>
-      <% } %>
+      </div>
+
+      <!-- 4. FATURAS -->
+      <div id="pane-faturas" class="tab-pane">
+        <% if (comprasSafe.length === 0) { %>
+          <p style="margin:0; color:#94a3b8; font-size:0.88rem;">Não existem faturas/recibos emitidos até ao momento.</p>
+        <% } else { %>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fatura / Recibo</th>
+                  <th>Método</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% comprasSafe.forEach(function(item) { %>
+                  <tr>
+                    <td><%= item.codigoRecibo || "-" %></td>
+                    <td><%= item.metodoPagamento || "Pagamento" %></td>
+                    <td><%= item.valorFinal !== undefined ? item.valorFinal : (item.valorBase || "-") %> <%= item.moeda || "EUR" %></td>
+                    <td><%= item.status || "confirmado" %></td>
+                    <td>
+                      <% if (item.codigoRecibo) { %>
+                        <a href="/recibo/<%= encodeURIComponent(item.codigoRecibo) %>" class="btn-acao">Ver Fatura</a>
+                      <% } else { %>
+                        -
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
     </div>
+  </section>
+
+  <!-- ÁREA PRINCIPAL: APENAS LEITOR DE VÍDEO E LISTA DE CANAIS LADO A LADO -->
+  <main class="main-stage">
+    <section class="panel" aria-label="Leitor de vídeo">
+      <h1 class="panel-title">
+        <span>Leitor de Vídeo</span>
+        <span id="canalAtualNome" class="canal-atual-label">Seleciona um canal</span>
+      </h1>
+
+      <div class="video-wrap">
+        <video id="videoPlayer" controls autoplay playsinline></video>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Lista de canais">
+      <h2 class="panel-title">
+        <span>Lista de Canais</span>
+        <span id="totalCanaisBadge" class="canal-tag"><%= listaCanaisSafe.length %></span>
+      </h2>
+
+      <input
+        type="text"
+        id="filtroCanal"
+        class="search-canal"
+        placeholder="Pesquisar canal ou categoria..."
+        oninput="filtrarCanais()"
+      />
+
+      <div id="listaCanais" class="lista-canais">
+        <% if (listaCanaisSafe.length === 0) { %>
+          <p style="color:#94a3b8; font-size:0.86rem; margin:6px 0;">Nenhum canal disponível no momento.</p>
+        <% } else { %>
+          <% listaCanaisSafe.forEach(function(canal, idx) {
+            const nomeCanal = canal.nome || canal.titulo || ("Canal " + (idx + 1));
+            const grupoCanal = canal.grupo || canal.categoria || "TV";
+            const urlCanal = canal.url || canal.streamUrl || "";
+          %>
+            <button
+              type="button"
+              class="canal-item"
+              data-nome="<%= nomeCanal %>"
+              data-grupo="<%= grupoCanal %>"
+              data-url="<%= urlCanal %>"
+              onclick="selecionarCanal(this, <%= idx %>)"
+            >
+              <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><%= nomeCanal %></span>
+              <span class="canal-tag"><%= grupoCanal %></span>
+            </button>
+          <% }); %>
+        <% } %>
+      </div>
+    </aside>
   </main>
 
   <script>
-    function reproduzirLink() {
-      const input = document.getElementById("inputLinkVideo");
-      const video = document.getElementById("videoPlayer");
-      if (!input || !video || !input.value.trim()) return;
-      video.src = input.value.trim();
-      video.play().catch(() => {});
+    let hlsInstance = null;
+    const titulosSecao = {
+      codigo: "Código Promocional para Convidar",
+      compras: "Histórico de Compras no Perfil",
+      suporte: "Suporte Técnico",
+      faturas: "Faturas e Recibos",
+    };
+
+    function abrirSecao(chave) {
+      const drawer = document.getElementById("drawerSecoes");
+      const tituloEl = document.getElementById("drawerTitulo");
+      const panes = document.querySelectorAll(".tab-pane");
+      const botoes = document.querySelectorAll(".nav-btn[data-tab]");
+
+      const jaAtivo =
+        drawer.classList.contains("visivel") &&
+        document.getElementById("pane-" + chave)?.classList.contains("ativo");
+
+      if (jaAtivo) {
+        fecharSecoes();
+        return;
+      }
+
+      panes.forEach((p) => p.classList.remove("ativo"));
+      botoes.forEach((b) => b.classList.remove("ativo"));
+
+      const alvoPane = document.getElementById("pane-" + chave);
+      const alvoBtn = document.querySelector('.nav-btn[data-tab="' + chave + '"]');
+
+      if (alvoPane) alvoPane.classList.add("ativo");
+      if (alvoBtn) alvoBtn.classList.add("ativo");
+      if (tituloEl) tituloEl.textContent = titulosSecao[chave] || "Detalhes";
+
+      drawer.classList.add("visivel");
     }
 
-    function enviarChatDireto() {
-      const inp = document.getElementById("inputChatSuporte");
-      const box = document.getElementById("chatMensagens");
-      if (!inp || !box || !inp.value.trim()) return;
-      const texto = inp.value.trim();
-      box.innerHTML += `<div style="margin-top:6px;"><strong>Tu:</strong> ${texto.replace(/</g, "&lt;")}</div>`;
-      box.innerHTML += `<div style="margin-top:4px; color:#38bdf8;"><strong>Suporte:</strong> Mensagem registada! Para resposta imediata utiliza também WhatsApp ou Telegram.</div>`;
-      inp.value = "";
-      box.scrollTop = box.scrollHeight;
+    function fecharSecoes() {
+      const drawer = document.getElementById("drawerSecoes");
+      document.querySelectorAll(".tab-pane").forEach((p) => p.classList.remove("ativo"));
+      document.querySelectorAll(".nav-btn[data-tab]").forEach((b) => b.classList.remove("ativo"));
+      if (drawer) drawer.classList.remove("visivel");
     }
+
+    function enviarMensagemSuporte(event) {
+      event.preventDefault();
+      const input = document.getElementById("chatInput");
+      const log = document.getElementById("chatLog");
+      if (!input || !log) return;
+
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      const userDiv = document.createElement("div");
+      userDiv.style.marginTop = "6px";
+      userDiv.innerHTML = '<strong style="color:#38bdf8;">Tu:</strong> ' + texto.replace(/</g, "&lt;");
+      log.appendChild(userDiv);
+
+      const respDiv = document.createElement("div");
+      respDiv.style.marginTop = "4px";
+      respDiv.style.color = "#94a3b8";
+      respDiv.textContent = "Suporte AlphaTV: Mensagem recebida. Se precisar de ajuda imediata, utilize WhatsApp ou Telegram.";
+      log.appendChild(respDiv);
+
+      log.scrollTop = log.scrollHeight;
+      input.value = "";
+    }
+
+    function filtrarCanais() {
+      const termo = (document.getElementById("filtroCanal")?.value || "").toLowerCase().trim();
+      const itens = document.querySelectorAll(".canal-item");
+      let visiveis = 0;
+
+      itens.forEach((item) => {
+        const nome = (item.dataset.nome || "").toLowerCase();
+        const grupo = (item.dataset.grupo || "").toLowerCase();
+        const corresponde = !termo || nome.includes(termo) || grupo.includes(termo);
+        item.style.display = corresponde ? "flex" : "none";
+        if (corresponde) visiveis++;
+      });
+
+      const badge = document.getElementById("totalCanaisBadge");
+      if (badge) badge.textContent = String(visiveis);
+    }
+
+    function reproduzirStream(url) {
+      const video = document.getElementById("videoPlayer");
+      if (!video || !url) return;
+
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+
+      if (url.includes(".m3u8") && window.Hls && window.Hls.isSupported()) {
+        hlsInstance = new window.Hls();
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, function () {
+          video.play().catch(function () {});
+        });
+      } else {
+        video.src = url;
+        video.play().catch(function () {});
+      }
+    }
+
+    function selecionarCanal(el, idx) {
+      if (!el) return;
+      document.querySelectorAll(".canal-item").forEach((item) => item.classList.remove("ativo"));
+      el.classList.add("ativo");
+
+      const nome = el.dataset.nome || ("Canal " + (idx + 1));
+      const url = el.dataset.url || "";
+      const label = document.getElementById("canalAtualNome");
+      if (label) label.textContent = nome;
+
+      reproduzirStream(url);
+    }
+
+    window.addEventListener("DOMContentLoaded", function () {
+      const primeiroCanal = document.querySelector(".canal-item");
+      if (primeiroCanal) {
+        selecionarCanal(primeiroCanal, 0);
+      }
+    });
   </script>
 </body>
 </html>

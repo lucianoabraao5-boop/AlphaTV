@@ -20,4 +20,10 @@ aprendendo node/
 ├── package.json
 └── servidor-express.js       # Ponto de entrada limpo do servidor
 
+
+
 cd "C:\Users\LUTAABRAAO\Desktop\aprendendo node"
+
+git add .
+git commit -m "texto da atualizacao"
+git push origin main
